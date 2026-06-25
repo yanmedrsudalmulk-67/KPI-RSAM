@@ -52,6 +52,27 @@ SELECT setval('indikator_kpi_id_seq', (SELECT MAX(id) FROM indikator_kpi));
 -- Perintah tambahan untuk fitur Dokumen Realisasi KPI
 ALTER TABLE capaian_kpi ADD COLUMN IF NOT EXISTS dokumen_url TEXT;
 
+-- Tabel untuk menyimpan pengaturan aplikasi (logo, background, dll)
+CREATE TABLE IF NOT EXISTS settings (
+    id SERIAL PRIMARY KEY,
+    logo_url TEXT,
+    welcome_bg_type TEXT DEFAULT 'default',
+    welcome_bg_val TEXT,
+    menu_bg_type TEXT DEFAULT 'default',
+    menu_bg_val TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert data awal untuk settings jika belum ada
+INSERT INTO settings (id, logo_url, welcome_bg_type, welcome_bg_val, menu_bg_type, menu_bg_val)
+VALUES (1, '', 'default', '', 'default', '')
+ON CONFLICT (id) DO NOTHING;
+
+-- Buat bucket storage assets jika menggunakan Supabase Dashboard
+INSERT INTO storage.buckets (id, name, public) VALUES ('assets', 'assets', true) ON CONFLICT DO NOTHING;
+
 -- Buat bucket storage dokumen_realisasi_kpi jika menggunakan Supabase Dashboard
 -- (Bisa juga dibuat manual via menu Storage di Supabase)
 INSERT INTO storage.buckets (id, name, public) VALUES ('dokumen_realisasi_kpi', 'dokumen_realisasi_kpi', true) ON CONFLICT DO NOTHING;
+

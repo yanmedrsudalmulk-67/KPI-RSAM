@@ -13,19 +13,6 @@ export default function BackgroundDecorations() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadSettings = async () => {
-    // 1. Instant recovery from local storage
-    if (typeof window !== "undefined") {
-      const localWType = localStorage.getItem("welcome_bg_type") || "default";
-      const localWVal = localStorage.getItem("welcome_bg_val") || "";
-      const localMType = localStorage.getItem("menu_bg_type") || "default";
-      const localMVal = localStorage.getItem("menu_bg_val") || "";
-
-      setWelcomeBgType(localWType);
-      setWelcomeBgVal(localWVal);
-      setMenuBgType(localMType);
-      setMenuBgVal(localMVal);
-    }
-
     // 2. Cloud synchronization from Supabase
     if (supabase) {
       try {
@@ -41,22 +28,18 @@ export default function BackgroundDecorations() {
         if (!error && data) {
           if (data.welcome_bg_type) {
             setWelcomeBgType(data.welcome_bg_type);
-            localStorage.setItem("welcome_bg_type", data.welcome_bg_type);
           }
           if (
             data.welcome_bg_val !== undefined &&
             data.welcome_bg_val !== null
           ) {
             setWelcomeBgVal(data.welcome_bg_val);
-            localStorage.setItem("welcome_bg_val", data.welcome_bg_val);
           }
           if (data.menu_bg_type) {
             setMenuBgType(data.menu_bg_type);
-            localStorage.setItem("menu_bg_type", data.menu_bg_type);
           }
           if (data.menu_bg_val !== undefined && data.menu_bg_val !== null) {
             setMenuBgVal(data.menu_bg_val);
-            localStorage.setItem("menu_bg_val", data.menu_bg_val);
           }
 
           // Check if logo_url itself is a serialized JSON payload
@@ -65,25 +48,21 @@ export default function BackgroundDecorations() {
               const parsed = JSON.parse(data.logo_url);
               if (parsed.welcome_bg_type) {
                 setWelcomeBgType(parsed.welcome_bg_type);
-                localStorage.setItem("welcome_bg_type", parsed.welcome_bg_type);
               }
               if (
                 parsed.welcome_bg_val !== undefined &&
                 parsed.welcome_bg_val !== null
               ) {
                 setWelcomeBgVal(parsed.welcome_bg_val);
-                localStorage.setItem("welcome_bg_val", parsed.welcome_bg_val);
               }
               if (parsed.menu_bg_type) {
                 setMenuBgType(parsed.menu_bg_type);
-                localStorage.setItem("menu_bg_type", parsed.menu_bg_type);
               }
               if (
                 parsed.menu_bg_val !== undefined &&
                 parsed.menu_bg_val !== null
               ) {
                 setMenuBgVal(parsed.menu_bg_val);
-                localStorage.setItem("menu_bg_val", parsed.menu_bg_val);
               }
             } catch (innerErr) {
               // ignore
@@ -107,25 +86,21 @@ export default function BackgroundDecorations() {
               const parsed = JSON.parse(logoOnlyData.logo_url);
               if (parsed.welcome_bg_type) {
                 setWelcomeBgType(parsed.welcome_bg_type);
-                localStorage.setItem("welcome_bg_type", parsed.welcome_bg_type);
               }
               if (
                 parsed.welcome_bg_val !== undefined &&
                 parsed.welcome_bg_val !== null
               ) {
                 setWelcomeBgVal(parsed.welcome_bg_val);
-                localStorage.setItem("welcome_bg_val", parsed.welcome_bg_val);
               }
               if (parsed.menu_bg_type) {
                 setMenuBgType(parsed.menu_bg_type);
-                localStorage.setItem("menu_bg_type", parsed.menu_bg_type);
               }
               if (
                 parsed.menu_bg_val !== undefined &&
                 parsed.menu_bg_val !== null
               ) {
                 setMenuBgVal(parsed.menu_bg_val);
-                localStorage.setItem("menu_bg_val", parsed.menu_bg_val);
               }
             } catch (jsonErr) {
               // ignore

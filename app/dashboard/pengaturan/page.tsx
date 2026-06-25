@@ -57,25 +57,6 @@ export default function PengaturanPage() {
   const fetchSettings = async () => {
     setIsLoading(true);
     
-    // First, try loading background specs from localStorage for immediate responsiveness
-    if (typeof window !== "undefined") {
-      const localWType = localStorage.getItem("welcome_bg_type");
-      const localWVal = localStorage.getItem("welcome_bg_val");
-      const localMType = localStorage.getItem("menu_bg_type");
-      const localMVal = localStorage.getItem("menu_bg_val");
-      
-      if (localWType) setWelcomeBgType(localWType as any);
-      if (localWVal) {
-        setWelcomeBgVal(localWVal);
-        if (localWType === "video") setWelcomeVideoInput(localWVal);
-      }
-      if (localMType) setMenuBgType(localMType as any);
-      if (localMVal) {
-        setMenuBgVal(localMVal);
-        if (localMType === "video") setMenuVideoInput(localMVal);
-      }
-    }
-
     if (!supabase) {
       console.warn("Supabase configuration missing.");
       setIsLoading(false);
@@ -107,20 +88,16 @@ export default function PengaturanPage() {
               
               if (parsed.welcome_bg_type) {
                 setWelcomeBgType(parsed.welcome_bg_type as any);
-                localStorage.setItem("welcome_bg_type", parsed.welcome_bg_type);
               }
               if (parsed.welcome_bg_val !== undefined && parsed.welcome_bg_val !== null) {
                 setWelcomeBgVal(parsed.welcome_bg_val);
-                localStorage.setItem("welcome_bg_val", parsed.welcome_bg_val);
                 if (parsed.welcome_bg_type === "video") setWelcomeVideoInput(parsed.welcome_bg_val);
               }
               if (parsed.menu_bg_type) {
                 setMenuBgType(parsed.menu_bg_type as any);
-                localStorage.setItem("menu_bg_type", parsed.menu_bg_type);
               }
               if (parsed.menu_bg_val !== undefined && parsed.menu_bg_val !== null) {
                 setMenuBgVal(parsed.menu_bg_val);
-                localStorage.setItem("menu_bg_val", parsed.menu_bg_val);
                 if (parsed.menu_bg_type === "video") setMenuVideoInput(parsed.menu_bg_val);
               }
             } catch (jsonErr) {
@@ -140,20 +117,16 @@ export default function PengaturanPage() {
             actualLogo = parsed.logo_url || "";
             if (parsed.welcome_bg_type) {
               setWelcomeBgType(parsed.welcome_bg_type as any);
-              localStorage.setItem("welcome_bg_type", parsed.welcome_bg_type);
             }
             if (parsed.welcome_bg_val !== undefined && parsed.welcome_bg_val !== null) {
               setWelcomeBgVal(parsed.welcome_bg_val);
-              localStorage.setItem("welcome_bg_val", parsed.welcome_bg_val);
               if (parsed.welcome_bg_type === "video") setWelcomeVideoInput(parsed.welcome_bg_val);
             }
             if (parsed.menu_bg_type) {
               setMenuBgType(parsed.menu_bg_type as any);
-              localStorage.setItem("menu_bg_type", parsed.menu_bg_type);
             }
             if (parsed.menu_bg_val !== undefined && parsed.menu_bg_val !== null) {
               setMenuBgVal(parsed.menu_bg_val);
-              localStorage.setItem("menu_bg_val", parsed.menu_bg_val);
               if (parsed.menu_bg_type === "video") setMenuVideoInput(parsed.menu_bg_val);
             }
           } catch (jsonErr) {
@@ -166,20 +139,16 @@ export default function PengaturanPage() {
         // Also fallback to direct columns if they existed and aren't overriden by JSON
         if (data.welcome_bg_type) {
           setWelcomeBgType(data.welcome_bg_type as any);
-          localStorage.setItem("welcome_bg_type", data.welcome_bg_type);
         }
         if (data.welcome_bg_val !== undefined && data.welcome_bg_val !== null) {
           setWelcomeBgVal(data.welcome_bg_val);
-          localStorage.setItem("welcome_bg_val", data.welcome_bg_val);
           if (data.welcome_bg_type === "video") setWelcomeVideoInput(data.welcome_bg_val);
         }
         if (data.menu_bg_type) {
           setMenuBgType(data.menu_bg_type as any);
-          localStorage.setItem("menu_bg_type", data.menu_bg_type);
         }
         if (data.menu_bg_val !== undefined && data.menu_bg_val !== null) {
           setMenuBgVal(data.menu_bg_val);
-          localStorage.setItem("menu_bg_val", data.menu_bg_val);
           if (data.menu_bg_type === "video") setMenuVideoInput(data.menu_bg_val);
         }
       }
@@ -260,10 +229,10 @@ export default function PengaturanPage() {
             } catch (e) {}
           } else {
             jsonPayload = {
-              welcome_bg_type: currentSettings.welcome_bg_type || localStorage.getItem("welcome_bg_type") || "default",
-              welcome_bg_val: currentSettings.welcome_bg_val || localStorage.getItem("welcome_bg_val") || "",
-              menu_bg_type: currentSettings.menu_bg_type || localStorage.getItem("menu_bg_type") || "default",
-              menu_bg_val: currentSettings.menu_bg_val || localStorage.getItem("menu_bg_val") || ""
+              welcome_bg_type: currentSettings.welcome_bg_type || "default",
+              welcome_bg_val: currentSettings.welcome_bg_val || "",
+              menu_bg_type: currentSettings.menu_bg_type || "default",
+              menu_bg_val: currentSettings.menu_bg_val || ""
             };
           }
         }
@@ -281,10 +250,10 @@ export default function PengaturanPage() {
           .upsert({
             id: 1,
             logo_url: nextLogoValue,
-            welcome_bg_type: localStorage.getItem("welcome_bg_type") || "default",
-            welcome_bg_val: localStorage.getItem("welcome_bg_val") || "",
-            menu_bg_type: localStorage.getItem("menu_bg_type") || "default",
-            menu_bg_val: localStorage.getItem("menu_bg_val") || ""
+            welcome_bg_type: "default",
+            welcome_bg_val: "",
+            menu_bg_type: "default",
+            menu_bg_val: ""
           }, { onConflict: "id" });
 
         if (dbError) {
@@ -373,13 +342,9 @@ export default function PengaturanPage() {
       if (target === "welcome") {
         setWelcomeBgType(type);
         setWelcomeBgVal(finalVal);
-        localStorage.setItem("welcome_bg_type", type);
-        localStorage.setItem("welcome_bg_val", finalVal);
       } else {
         setMenuBgType(type);
         setMenuBgVal(finalVal);
-        localStorage.setItem("menu_bg_type", type);
-        localStorage.setItem("menu_bg_val", finalVal);
       }
 
       // Sync with Supabase (using progressive resilience and JSON serialization fallback)
@@ -461,8 +426,8 @@ export default function PengaturanPage() {
         });
       } else {
         setStatusMessage({
-          type: "success",
-          text: `Pengaturan Latar Belakang ${target === "welcome" ? "Welcome Page" : "Halaman Menu"} berhasil disimpan secara lokal karena konfigurasi Supabase tidak ditemukan!`,
+          type: "error",
+          text: `Gagal menyimpan pengaturan: Konfigurasi Supabase tidak ditemukan! Pastikan Anda telah mengatur NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY pada Vercel.`,
         });
       }
 
@@ -879,7 +844,7 @@ export default function PengaturanPage() {
                 Panduan Sinkronisasi Cloud:
               </p>
               <p className="opacity-90">
-                Pembaruan latar belakang didukung dengan sinkronisasi instan offline-first. Jika Anda ingin pengaturan tersinkronisasi murni di cloud untuk antar-pengguna, pastikan Anda telah memperbarui tabel <code className="bg-blue-950 px-1 py-0.5 rounded text-white font-mono">settings</code> di Supabase dengan menambahkan kolom-kolom baru:
+                Aplikasi ini sekarang terintegrasi penuh dan murni bergantung pada Supabase untuk menyimpan semua pengaturan dan file yang diunggah. Pastikan variabel lingkungan (Environment Variables) telah diatur di Vercel, dan Anda telah menjalankan query di bawah ini pada Supabase SQL Editor:
               </p>
               <pre className="bg-[#030110] border border-white/10 p-2.5 rounded-lg text-[10px] text-indigo-300 font-mono mt-1 overflow-x-auto select-all">
 {`ALTER TABLE public.settings 
