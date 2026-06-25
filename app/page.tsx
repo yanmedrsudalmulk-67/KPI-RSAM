@@ -37,6 +37,10 @@ export default function LandingPage() {
     <div className="min-h-screen text-white flex flex-col relative font-roboto-condensed overflow-hidden">
       {/* Background Cinematic Overlay for Landing Page */}
       <div className="absolute inset-0 z-[-1] pointer-events-none">
+        {/* Subtle, localized vignettes from top-left and bottom-left corners (not stretching too far, soft opacity) */}
+        <div className="absolute top-0 left-0 w-[45%] h-[40%] bg-gradient-to-br from-[#020617]/45 via-[#020617]/10 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-[45%] h-[40%] bg-gradient-to-tr from-[#020617]/45 via-[#020617]/10 to-transparent"></div>
+
         {/* Mobile / Portrait mode: light bottom-up gradient to protect text legibility, keeping the main background clear & visible with high contrast like landscape */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-[#020617]/25 to-transparent block md:hidden portrait:block landscape:hidden"></div>
 
@@ -48,7 +52,7 @@ export default function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-start p-6 md:p-10 w-full animate-in fade-in slide-in-from-top-8 duration-1000 -mt-[18px]">
+      <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-start p-6 md:p-10 w-full animate-in fade-in slide-in-from-top-8 duration-1000 -mt-2 md:-mt-[18px]">
         <div className="flex items-center gap-4">
           <RSLogo size="large" />
           <div className="flex flex-col">

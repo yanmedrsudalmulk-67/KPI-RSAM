@@ -77,30 +77,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             active={pathname === "/dashboard/laporan"} 
             isCollapsed={isCollapsed}
           />
-          <div className="relative">
-            <NavItem 
-              href="/dashboard/grafik" 
-              icon={<BarChart3 />} 
-              label="Grafik Analytics" 
-              active={pathname === "/dashboard/grafik"} 
-              isCollapsed={isCollapsed}
-            />
-            {/* Toggle Button */}
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                setIsCollapsed(!isCollapsed);
-              }}
-              className="absolute top-1/2 -translate-y-1/2 -right-7 w-6 h-6 rounded-full bg-dark-charcoal border border-white/10 text-gray-400 hover:text-white flex items-center justify-center hover:border-blue-400/50 shadow-lg cursor-pointer transition-all duration-150 z-50 group hover:scale-110"
-              title={isCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-3.5 h-3.5 transition-transform duration-150" />
-              ) : (
-                <ChevronLeft className="w-3.5 h-3.5 transition-transform duration-150" />
-              )}
-            </button>
-          </div>
+          <NavItem 
+            href="/dashboard/grafik" 
+            icon={<BarChart3 />} 
+            label="Grafik Analytics" 
+            active={pathname === "/dashboard/grafik"} 
+            isCollapsed={isCollapsed}
+          />
           <NavItem 
             href="/dashboard/master" 
             icon={<Database />} 
@@ -126,6 +109,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             isCollapsed={isCollapsed}
           />
         </div>
+
+        {/* Elegant Minimalist Sidebar Toggle Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            setIsCollapsed(!isCollapsed);
+          }}
+          className="absolute top-1/2 -translate-y-1/2 -right-4 w-4 h-14 bg-dark-charcoal/95 hover:bg-dark-charcoal backdrop-blur-md border-y border-r border-white/10 rounded-r-lg text-gray-400 hover:text-white flex items-center justify-center shadow-[4px_4px_12px_rgba(0,0,0,0.5)] cursor-pointer transition-all duration-200 z-50 group hover:w-5 hover:-right-5 focus:outline-none"
+          title={isCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-3 h-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+          ) : (
+            <ChevronLeft className="w-3 h-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+          )}
+        </button>
       </aside>
 
       {/* Main Content */}
