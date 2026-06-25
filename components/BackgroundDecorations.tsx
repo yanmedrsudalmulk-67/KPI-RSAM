@@ -178,7 +178,7 @@ export default function BackgroundDecorations() {
       )}
 
       {/* CASE C: Default Modern Abstract Luxury Gradient Theme (The beautiful SVG vectors) */}
-      {bgType === "default" && (
+      {bgType === "default" && !isWelcomePage && (
         <>
           {/* Ambient Glow Bubbles */}
           <div

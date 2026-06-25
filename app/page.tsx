@@ -37,8 +37,14 @@ export default function LandingPage() {
     <div className="min-h-screen text-white flex flex-col relative font-roboto-condensed overflow-hidden">
       {/* Background Cinematic Overlay for Landing Page */}
       <div className="absolute inset-0 z-[-1] pointer-events-none">
-        <div className="absolute top-0 left-0 bottom-0 w-full md:w-[60%] bg-gradient-to-r from-[#020617]/70 via-[#020617]/30 to-transparent"></div>
-        <div className="absolute top-0 right-0 bottom-0 w-full md:w-[40%] bg-gradient-to-l from-[#020617]/90 via-[#020617]/40 to-transparent"></div>
+        {/* Mobile / Portrait mode: light bottom-up gradient to protect text legibility, keeping the main background clear & visible with high contrast like landscape */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-[#020617]/25 to-transparent block md:hidden portrait:block landscape:hidden"></div>
+
+        {/* Landscape / Desktop cinematic side gradients (prevented from overlapping/stacking in portrait) */}
+        <div className="hidden md:block landscape:block portrait:hidden absolute inset-0">
+          <div className="absolute top-0 left-0 bottom-0 w-[60%] bg-gradient-to-r from-[#020617]/70 via-[#020617]/30 to-transparent"></div>
+          <div className="absolute top-0 right-0 bottom-0 w-[40%] bg-gradient-to-l from-[#020617]/90 via-[#020617]/40 to-transparent"></div>
+        </div>
       </div>
 
       {/* Header */}
