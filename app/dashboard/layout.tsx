@@ -30,13 +30,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside 
         className={`sticky top-0 h-screen z-40 relative ${
           isCollapsed ? "w-20" : "w-64"
-        } hidden md:flex flex-col sidebar-glass transition-[width] duration-300 cubic-bezier(0.16, 1, 0.3, 1) will-change-[width]`}
+        } hidden md:flex flex-col sidebar-glass transition-[width] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width]`}
       >
 
 
-        <div className={`p-6 flex items-center gap-3 border-b border-white/5 transition-[padding,gap] duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isCollapsed ? "justify-center px-4 gap-0" : ""}`}>
+        <div className={`p-6 flex items-center gap-3 border-b border-white/5 transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCollapsed ? "justify-center px-4 gap-0" : ""}`}>
           <RSLogo size={isCollapsed ? "small" : "large"} />
-          <div className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-auto opacity-100"}`}>
+          <div className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-auto opacity-100"}`}>
             <span className="font-poppins font-bold text-[13px] text-blue-50 tracking-wide drop-shadow-md">
               UOBK RSUD AL-MULK
             </span>
@@ -263,7 +263,7 @@ function NavItem({
   return (
     <Link 
       href={href}
-      className={`flex items-center group relative transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${
+      className={`flex items-center group relative transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         isCollapsed 
           ? "justify-center px-0 py-0 w-12 h-12 rounded-xl mx-auto" 
           : "px-4 py-3 rounded-xl w-full"
@@ -275,11 +275,11 @@ function NavItem({
             : "text-gray-400 hover:text-white hover:bg-white/5"
       }`}
     >
-      <div className={`w-5 h-5 flex items-center justify-center flex-shrink-0 transition-transform duration-300 cubic-bezier(0.16, 1, 0.3, 1) group-hover:scale-110 ${active ? "text-white animate-float-icon" : ""}`}>
+      <div className={`w-5 h-5 flex items-center justify-center flex-shrink-0 transition-transform duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 ${active ? "text-white animate-float-icon" : ""}`}>
         {icon}
       </div>
       
-      <span className={`font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${
+      <span className={`font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         isCollapsed 
           ? "w-0 opacity-0 pointer-events-none ml-0" 
           : "w-auto opacity-100 ml-3"

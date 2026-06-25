@@ -66,46 +66,49 @@ export default function DashboardPage() {
           <p className="text-gray-400 mt-1">Pusat Monitoring Indikator Kinerja Rumah Sakit</p>
         </div>
         
-        <div className="relative overflow-hidden flex items-center glossy-glass rounded-full p-2.5 px-7 w-max transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_40px_rgba(99,102,241,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]">
-          {/* Glass glare highlight line */}
-          <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/15 to-transparent pointer-events-none rounded-t-full" />
+        {/* Animated Border Container */}
+        <div className="relative p-[2px] rounded-full overflow-hidden group w-max">
+          {/* Rotating gradient background */}
+          <div className="absolute inset-[-1000%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#4facfe_25%,#f093fb_50%,#f5576c_75%,transparent_100%)] opacity-80" />
           
-          {/* Accent light shine reflection */}
-          <div className="absolute -left-1/4 -top-1/2 w-1/2 h-[200%] bg-gradient-to-r from-transparent via-white/[0.06] to-transparent rotate-12 pointer-events-none" />
+          <div className="relative overflow-hidden flex items-center bg-[#0b1120] rounded-full p-2.5 px-7 w-max backdrop-blur-xl z-10 transition-all duration-300 hover:scale-[1.02] shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            {/* Glass glare highlight line */}
+            <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/5 to-transparent pointer-events-none rounded-t-full" />
+            
+            {/* Segment 1: Bulan */}
+            <div className="relative flex items-center pr-5 text-white font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity z-10">
+              <select 
+                value={bulan}
+                onChange={(e) => setBulan(parseInt(e.target.value))}
+                className="bg-transparent text-white pr-6 appearance-none focus:outline-none cursor-pointer font-semibold text-sm tracking-wide"
+              >
+                {MONTHS.map((m, idx) => (
+                  <option key={m} value={idx + 1} className="bg-[#0f172a] text-white">
+                    {m.substring(0, 3)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-white/70 absolute right-0 pointer-events-none" />
+            </div>
 
-          {/* Segment 1: Bulan */}
-          <div className="relative flex items-center pr-5 text-white font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity z-10">
-            <select 
-              value={bulan}
-              onChange={(e) => setBulan(parseInt(e.target.value))}
-              className="bg-transparent text-white pr-6 appearance-none focus:outline-none cursor-pointer font-semibold text-sm tracking-wide"
-            >
-              {MONTHS.map((m, idx) => (
-                <option key={m} value={idx + 1} className="bg-[#0f172a] text-white">
-                  {m.substring(0, 3)}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-white/70 absolute right-0 pointer-events-none" />
-          </div>
+            {/* Divider */}
+            <div className="w-[1px] h-6 bg-white/10 z-10" />
 
-          {/* Divider */}
-          <div className="w-[1px] h-6 bg-indigo-500/30 z-10" />
-
-          {/* Segment 2: Tahun */}
-          <div className="relative flex items-center pl-5 text-white font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity z-10">
-            <select 
-              value={tahun}
-              onChange={(e) => setTahun(parseInt(e.target.value))}
-              className="bg-transparent text-white pr-6 appearance-none focus:outline-none cursor-pointer font-semibold text-sm tracking-wide"
-            >
-              {[2024, 2025, 2026, 2027].map(y => (
-                <option key={y} value={y} className="bg-[#0f172a] text-white">
-                  {y}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-4 h-4 text-white/70 absolute right-0 pointer-events-none" />
+            {/* Segment 2: Tahun */}
+            <div className="relative flex items-center pl-5 text-white font-medium text-sm cursor-pointer hover:opacity-80 transition-opacity z-10">
+              <select 
+                value={tahun}
+                onChange={(e) => setTahun(parseInt(e.target.value))}
+                className="bg-transparent text-white pr-6 appearance-none focus:outline-none cursor-pointer font-semibold text-sm tracking-wide"
+              >
+                {[2024, 2025, 2026, 2027].map(y => (
+                  <option key={y} value={y} className="bg-[#0f172a] text-white">
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-white/70 absolute right-0 pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>
@@ -122,8 +125,6 @@ export default function DashboardPage() {
           <div key={pilar.id} className={`p-6 rounded-2xl glassmorphism group relative overflow-hidden flex flex-col justify-between min-h-[220px] transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:border-white/20 ${index === 6 ? 'md:col-span-2 lg:col-span-1 lg:col-start-2' : ''}`}
                style={{ animationDelay: `${index * 100}ms` }}
           >
-            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full bg-gradient-to-br ${pilar.color} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`} />
-            
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-semibold tracking-wider uppercase text-gray-400">PILAR {pilar.id}</span>
@@ -173,9 +174,8 @@ export default function DashboardPage() {
               </Link>
             </div>
             
-            {/* Glowing Bottom Line Effect */}
-            <div className={`absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r ${pilar.color} z-20`} />
-            <div className={`absolute bottom-0 left-0 w-full h-[15px] bg-gradient-to-r ${pilar.color} blur-xl opacity-60 z-0 translate-y-1`} />
+            {/* Colored Bottom Border */}
+            <div className={`absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r ${pilar.color} opacity-70 z-20 rounded-b-2xl`} />
           </div>
         ))}
       </div>
