@@ -37,9 +37,15 @@ export default function LandingPage() {
     <div className="min-h-screen text-white flex flex-col relative font-roboto-condensed overflow-hidden">
       {/* Background Cinematic Overlay for Landing Page */}
       <div className="absolute inset-0 z-[-1] pointer-events-none">
-        {/* Subtle, localized vignettes from top-left and bottom-left corners (not stretching too far, soft opacity) */}
-        <div className="absolute top-0 left-0 w-[45%] h-[40%] bg-gradient-to-br from-[#020617]/45 via-[#020617]/10 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-[45%] h-[40%] bg-gradient-to-tr from-[#020617]/45 via-[#020617]/10 to-transparent"></div>
+        {/* Subtle, localized vignettes from top-left and bottom-left corners (using radial-gradient for a perfectly soft, borderless blend) */}
+        <div 
+          className="absolute top-0 left-0 w-[45%] h-[40%]"
+          style={{ background: 'radial-gradient(circle at top left, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.15) 45%, rgba(2, 6, 23, 0) 100%)' }}
+        ></div>
+        <div 
+          className="absolute bottom-0 left-0 w-[45%] h-[40%]"
+          style={{ background: 'radial-gradient(circle at bottom left, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.15) 45%, rgba(2, 6, 23, 0) 100%)' }}
+        ></div>
 
         {/* Mobile / Portrait mode: light bottom-up gradient to protect text legibility, keeping the main background clear & visible with high contrast like landscape */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-[#020617]/25 to-transparent block md:hidden portrait:block landscape:hidden"></div>
