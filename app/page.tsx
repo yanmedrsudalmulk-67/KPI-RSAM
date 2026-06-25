@@ -47,8 +47,11 @@ export default function LandingPage() {
           style={{ background: 'radial-gradient(circle at bottom left, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.15) 45%, rgba(2, 6, 23, 0) 100%)' }}
         ></div>
 
-        {/* Mobile / Portrait mode: light bottom-up gradient to protect text legibility, keeping the main background clear & visible with high contrast like landscape */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-[#020617]/25 to-transparent block md:hidden portrait:block landscape:hidden"></div>
+        {/* Mobile / Portrait mode: super smooth eased bottom-up gradient to protect text legibility without visible transition lines */}
+        <div 
+          className="absolute inset-0 block md:hidden portrait:block landscape:hidden"
+          style={{ background: 'linear-gradient(to top, rgba(2, 6, 23, 0.85) 0%, rgba(2, 6, 23, 0.55) 20%, rgba(2, 6, 23, 0.3) 45%, rgba(2, 6, 23, 0.12) 70%, rgba(2, 6, 23, 0.03) 85%, rgba(2, 6, 23, 0) 100%)' }}
+        ></div>
 
         {/* Landscape / Desktop cinematic side gradients (prevented from overlapping/stacking in portrait) */}
         <div className="hidden md:block landscape:block portrait:hidden absolute inset-0">

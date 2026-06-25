@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../supabase';
+import { pilarKpi } from '../data';
 
 export interface PilarKPI {
   id: number;
@@ -8,8 +9,11 @@ export interface PilarKPI {
 
 export interface IndikatorKPI {
   id: number;
-  pilar_id: number;
+  pilar_id?: number;
+  pilar?: string;
+  nama_pilar?: string;
   nama_indikator: string;
+  uraian_kpi?: string;
   satuan: string;
   target_tahunan: number;
   keterangan: string;
@@ -27,36 +31,49 @@ export interface CapaianKPI {
 }
 
 export async function getPilars() {
-  if (!isSupabaseConfigured()) {
-    console.warn("Supabase is not configured.");
-    return [];
-  }
-  const { data, error } = await supabase!.from('pilar_kpi').select('*').order('id', { ascending: true });
-  if (error) throw error;
-  return data as PilarKPI[];
+  return pilarKpi.map(p => ({
+    id: p.id,
+    nama_pilar: p.name,
+    deskripsi: p.name,
+  })) as PilarKPI[];
 }
 
 export async function getIndicatorsByPilar(pilarId: number) {
   if (!isSupabaseConfigured()) {
     return [];
   }
-  const { data, error } = await supabase!.from('indikator_kpi').select('*').eq('pilar_id', pilarId).order('id', { ascending: true });
+  const foundPilar = pilarKpi.find(p => p.id === pilarId);
+  if (!foundPilar) return [];
+
+  const { data, error } = await supabase!
+    .from('indikator_kpi')
+    .select('*')
+    .eq('pilar', foundPilar.name)
+    .order('id', { ascending: true });
   if (error) throw error;
-  return data as IndikatorKPI[];
+
+  return (data || []).map(ind => ({
+    ...ind,
+    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+  })) as IndikatorKPI[];
 }
 
 export async function getPilarDetail(pilarId: number) {
   if (!isSupabaseConfigured()) return { pilar: null, indicators: [] };
   
-  const { data: pilar, error: err1 } = await supabase!.from('pilar_kpi').select('*').eq('id', pilarId).maybeSingle();
-  if (err1) throw err1;
-  if (!pilar) return { pilar: null, indicators: [] };
+  const foundPilar = pilarKpi.find((p) => p.id === pilarId);
+  if (!foundPilar) return { pilar: null, indicators: [] };
+  const pilar = { ...foundPilar, nama_pilar: foundPilar.name };
 
-  const { data: indicators, error: err2 } = await supabase!.from('indikator_kpi').select('*, capaian_kpi(*)').eq('pilar_id', pilarId);
+  const { data: indicators, error: err2 } = await supabase!
+    .from('indikator_kpi')
+    .select('*, capaian_kpi(*)')
+    .eq('pilar', pilar.nama_pilar)
+    .order('id', { ascending: true });
   if (err2) throw err2;
 
   // Process indicators to extract latest capaian (just using the highest id for now or latest month/year)
-  const processed = indicators.map(ind => {
+  const processed = (indicators || []).map(ind => {
     let latestCapaian = null;
     let totalRealisasi = 0;
     if (ind.capaian_kpi && ind.capaian_kpi.length > 0) {
@@ -79,6 +96,7 @@ export async function getPilarDetail(pilarId: number) {
 
     return {
       ...ind,
+      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
       latestCapaian,
       totalRealisasi,
       progress,
@@ -88,13 +106,21 @@ export async function getPilarDetail(pilarId: number) {
 
   return { pilar, indicators: processed };
 }
+
 export async function getIndicators() {
   if (!isSupabaseConfigured()) {
     return [];
   }
-  const { data, error } = await supabase!.from('indikator_kpi').select('*, pilar_kpi(*)').order('id', { ascending: true });
+  const { data, error } = await supabase!
+    .from('indikator_kpi')
+    .select('*')
+    .order('id', { ascending: true });
   if (error) throw error;
-  return data;
+  
+  return (data || []).map(ind => ({
+    ...ind,
+    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+  }));
 }
 
 export async function getDashboardSummary(tahun: number, bulan: number) {
@@ -103,18 +129,32 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
   }
 
   // Fetch all indicators with their capaians
-  const { data: indicators, error: errInd } = await supabase!.from('indikator_kpi').select('*, capaian_kpi(*)');
+  const { data: indicators, error: errInd } = await supabase!
+    .from('indikator_kpi')
+    .select('*, capaian_kpi(*)');
   if (errInd) throw errInd;
 
   // Derive pilars from indicators
-  const pilarNames = [...new Set(indicators.map(i => i.pilar))];
-  const pilars = pilarNames.map((name, index) => ({
-    id: index + 1,
-    nama_pilar: name || `PILAR ${index + 1}`
-  }));
+  const pilarNames = [...new Set((indicators || []).map(i => i.pilar))].filter(Boolean);
+  
+  // Sort pilars so PILAR 1 comes before PILAR 2, etc.
+  pilarNames.sort((a, b) => {
+    const aNum = parseInt(a.match(/PILAR (\d+)/)?.[1] || "999");
+    const bNum = parseInt(b.match(/PILAR (\d+)/)?.[1] || "999");
+    return aNum - bNum;
+  });
+
+  const pilars = pilarNames.map((name, index) => {
+    const matchedPilar = pilarKpi.find(p => p.name === name);
+    return {
+      id: matchedPilar?.id || (index + 1),
+      nama_pilar: name,
+      color: matchedPilar?.color || 'from-primary-purple to-primary-pink'
+    };
+  });
 
   const result = pilars.map((pilar) => {
-    const pilarIndicators = indicators.filter(i => i.pilar === pilar.nama_pilar);
+    const pilarIndicators = (indicators || []).filter(i => i.pilar === pilar.nama_pilar);
     let totalPersentase = 0;
     let countIndikatorAdaTarget = 0;
 
@@ -129,19 +169,15 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
       let pct = 0;
       if (ind.target_tahunan && Number(ind.target_tahunan) > 0) {
         pct = (totalRealisasi / Number(ind.target_tahunan)) * 100;
-        if (pct > 100) pct = 100; // Cap at 100% per indicator (optional, but good for average)
+        if (pct > 100) pct = 100; // Cap at 100% per indicator (optional)
         totalPersentase += pct;
         countIndikatorAdaTarget++;
-      } else if (ind.target_tahunan === null || Number(ind.target_tahunan) === 0) {
-        // Exclude from average if target is null 
       }
     });
 
     let finalProgress = 0;
     if (countIndikatorAdaTarget > 0) {
       finalProgress = Number((totalPersentase / countIndikatorAdaTarget).toFixed(1));
-    } else {
-      finalProgress = 0;
     }
 
     let status = "Belum tercapai";
@@ -153,8 +189,7 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
       count: pilarIndicators.length,
       progress: finalProgress,
       status: status,
-      trend: finalProgress >= 80 ? 'up' : 'down',
-      color: pilar.id % 2 === 0 ? 'from-primary-purple to-primary-pink' : 'from-primary-cyan to-blue-500'
+      trend: finalProgress >= 80 ? 'up' : 'down'
     };
   });
 
@@ -165,8 +200,9 @@ export async function getCapaianSummary() {
   if (!isSupabaseConfigured()) {
     return [];
   }
-  // This gets achievements joined with indicator to aggregate later or directly
-  const { data, error } = await supabase!.from('capaian_kpi').select('*, indikator_kpi(pilar_id, target_tahunan)');
+  const { data, error } = await supabase!
+    .from('capaian_kpi')
+    .select('*, indikator_kpi(pilar, target_tahunan)');
   if (error) throw error;
   return data;
 }
@@ -178,26 +214,28 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
 
   const { data: indicators, error: errInd } = await supabase!
     .from('indikator_kpi')
-    .select('*, pilar_kpi(nama_pilar)')
+    .select('*')
     .order('id', { ascending: true });
   
   if (errInd || !indicators || indicators.length === 0) {
      return []; // Return empty so the frontend can fallback to mock data
   }
 
-  const { data: capaians, error: errCap } = await supabase!.from('capaian_kpi').select('*').eq('tahun', tahun);
+  const { data: capaians, error: errCap } = await supabase!
+    .from('capaian_kpi')
+    .select('*')
+    .eq('tahun', tahun);
   
   const capData = capaians || [];
 
   return indicators.map(ind => {
     const indCapaians = capData.filter(c => c.indikator_id === ind.id);
-    const pilarObj = ind.pilar_kpi as any;
-    const pilarName = pilarObj?.nama_pilar || ind.pilar || '';
+    const pilarName = ind.pilar || '';
 
     return {
       ...ind,
       nama_pilar: pilarName,
-      nama_indikator: ind.nama_indikator || ind.uraian_kpi || ind.name,
+      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
       target_tahunan: ind.target_tahunan !== undefined && ind.target_tahunan !== null ? ind.target_tahunan : (ind.target || 0),
       capaians: indCapaians
     };
@@ -252,7 +290,7 @@ export async function saveCapaian(data: Partial<CapaianKPI>) {
 
   const { data: result, error } = await supabase!.from('capaian_kpi').upsert({
     ...data,
-    created_at: new Date().toISOString()
+    updated_at: new Date().toISOString()
   }, { onConflict: 'indikator_id,bulan,tahun' }).select();
 
   if (error) throw error;

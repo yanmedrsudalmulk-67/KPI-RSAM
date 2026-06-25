@@ -28,9 +28,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-transparent text-gray-100 flex font-sans">
       {/* Sidebar Desktop */}
       <aside 
-        className={`relative ${
+        className={`sticky top-0 h-screen z-30 relative ${
           isCollapsed ? "w-20" : "w-64"
-        } hidden md:flex flex-col bg-dark-charcoal/25 backdrop-blur-2xl border-r border-white/10 shadow-[4px_0_24px_rgba(0,0,0,0.3)] h-screen sticky top-0 transition-all duration-150 ease-out will-change-[width]`}
+        } hidden md:flex flex-col sidebar-glass transition-all duration-150 ease-out will-change-[width]`}
       >
 
 
@@ -114,15 +114,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             setIsCollapsed(!isCollapsed);
           }}
-          className="absolute top-1/2 -translate-y-1/2 -right-4 w-4 h-14 bg-dark-charcoal/95 hover:bg-dark-charcoal backdrop-blur-md border-y border-r border-white/10 rounded-r-lg text-gray-400 hover:text-white flex items-center justify-center shadow-[4px_4px_12px_rgba(0,0,0,0.5)] cursor-pointer transition-all duration-200 z-50 group hover:w-5 hover:-right-5 focus:outline-none"
+          className="absolute top-1/2 -translate-y-1/2 -right-6 w-6 h-16 bg-slate-950/95 hover:bg-slate-900 border-y border-r border-white/15 rounded-r-xl text-gray-300 hover:text-white flex items-center justify-center shadow-[6px_4px_16px_rgba(0,0,0,0.6)] cursor-pointer transition-all duration-200 z-50 group active:scale-95 focus:outline-none"
           title={isCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-3 h-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
           ) : (
-            <ChevronLeft className="w-3 h-3 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            <ChevronLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
           )}
         </button>
       </aside>
