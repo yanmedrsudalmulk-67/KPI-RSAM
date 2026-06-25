@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-purple: #8b5cf6;
+  --color-primary-pink: #ec4899;
+  --color-primary-gold: #f59e0b;
+  --color-primary-cyan: #06b6d4;
+  --color-primary-green: #10b981;
+  --color-dark-navy: #0b1120;
+  --color-dark-charcoal: #1e293b;
+  --font-sans: var(--font-inter);
+  --font-poppins: var(--font-poppins);
+  --font-roboto-condensed: var(--font-roboto-condensed);
+}
+
+@layer utilities {
+  .glassmorphism {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+  }
+  .animate-shimmer {
+    background-size: 200% auto;
+    animation: shimmer 4s linear infinite alternate;
+  }
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+  .animate-float-icon {
+    animation: floatIcon 2.5s ease-in-out infinite;
+  }
+  .animate-slide-right {
+    animation: slideRight 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes slideRight {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes floatIcon {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.glossy-glass {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.02) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(13, 9, 37, 0.65) 0%,
+      rgba(11, 14, 43, 0.65) 100%
+    );
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-left: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+    0 0 15px rgba(99, 102, 241, 0.2);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
