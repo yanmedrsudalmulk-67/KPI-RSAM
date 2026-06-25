@@ -176,7 +176,10 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
     throw new Error("PGRST205"); // Simulate DB error to fallback
   }
 
-  const { data: indicators, error: errInd } = await supabase!.from('indikator_kpi').select('*').order('id', { ascending: true });
+  const { data: indicators, error: errInd } = await supabase!
+    .from('indikator_kpi')
+    .select('*, pilar_kpi(nama_pilar)')
+    .order('id', { ascending: true });
   
   if (errInd || !indicators || indicators.length === 0) {
      return []; // Return empty so the frontend can fallback to mock data
@@ -188,11 +191,14 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
 
   return indicators.map(ind => {
     const indCapaians = capData.filter(c => c.indikator_id === ind.id);
+    const pilarObj = ind.pilar_kpi as any;
+    const pilarName = pilarObj?.nama_pilar || ind.pilar || '';
+
     return {
       ...ind,
-      nama_pilar: ind.pilar || '',
-      nama_indikator: ind.uraian_kpi || ind.name,
-      target_tahunan: ind.target_tahunan || ind.target,
+      nama_pilar: pilarName,
+      nama_indikator: ind.nama_indikator || ind.uraian_kpi || ind.name,
+      target_tahunan: ind.target_tahunan !== undefined && ind.target_tahunan !== null ? ind.target_tahunan : (ind.target || 0),
       capaians: indCapaians
     };
   });

@@ -14,7 +14,7 @@ import {
   getIndicatorsWithCapaianByYear,
   saveCapaianMultiple,
 } from "@/lib/services/api";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 const MONTHS = [
   "Jan",
@@ -41,6 +41,12 @@ export default function InputKpiPage() {
   // Track inputs: { [indikatorId_bulan]: realisasi }
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [originalInputs, setOriginalInputs] = useState<Record<string, string>>(
+    {},
+  );
+
+  // Track targets: { [indikatorId]: target_tahunan }
+  const [targets, setTargets] = useState<Record<string, string>>({});
+  const [originalTargets, setOriginalTargets] = useState<Record<string, string>>(
     {},
   );
 
@@ -79,9 +85,14 @@ export default function InputKpiPage() {
 
       setData(fetchedData);
 
-      // Populate initial inputs
+      // Populate initial inputs and targets
       const initial: Record<string, string> = {};
+      const initialTargets: Record<string, string> = {};
       fetchedData.forEach((ind) => {
+        initialTargets[ind.id] = (ind.target_tahunan !== undefined && ind.target_tahunan !== null)
+          ? ind.target_tahunan.toString()
+          : (ind.target || 0).toString();
+
         if (ind.capaians) {
           ind.capaians.forEach((c: any) => {
             initial[`${ind.id}_${c.bulan}`] = c.realisasi.toString();
@@ -90,6 +101,8 @@ export default function InputKpiPage() {
       });
       setInputs(initial);
       setOriginalInputs(initial);
+      setTargets(initialTargets);
+      setOriginalTargets(initialTargets);
     } catch (error) {
       console.error("Error loading data", error);
     } finally {
@@ -105,19 +118,55 @@ export default function InputKpiPage() {
     setInputs((prev) => ({ ...prev, [`${indikatorId}_${bulan}`]: value }));
   };
 
+  const handleTargetChange = (indikatorId: number, value: string) => {
+    setTargets((prev) => ({ ...prev, [indikatorId]: value }));
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
       if (!isSupabaseConfigured()) {
         await new Promise((res) => setTimeout(res, 1000));
         setOriginalInputs(inputs);
+        setOriginalTargets(targets);
         showSuccess();
         setIsSaving(false);
         return;
       }
 
+      // 1. Detect target changes and save them
+      const targetChangesToSave: { id: number; target_tahunan: number }[] = [];
+      data.forEach((ind) => {
+        const key = ind.id.toString();
+        if (targets[key] !== originalTargets[key] && targets[key] !== undefined) {
+          const targetVal = parseFloat(targets[key]);
+          const finalTarget = isNaN(targetVal) ? 0 : targetVal;
+          targetChangesToSave.push({
+            id: ind.id,
+            target_tahunan: finalTarget,
+          });
+        }
+      });
+
+      let targetsUpdated = false;
+      if (targetChangesToSave.length > 0) {
+        for (const change of targetChangesToSave) {
+          const { error: targetErr } = await supabase!
+            .from("indikator_kpi")
+            .update({ target_tahunan: change.target_tahunan })
+            .eq("id", change.id);
+
+          if (targetErr) {
+            throw new Error(`Gagal menyimpan target KPI: ${targetErr.message}`);
+          }
+        }
+        targetsUpdated = true;
+      }
+
+      // 2. Detect realisasi changes and save them
       const toSave: any[] = [];
       data.forEach((ind) => {
+        const currentTargetVal = parseFloat(targets[ind.id.toString()] || "0");
         for (let b = 1; b <= 12; b++) {
           const key = `${ind.id}_${b}`;
           if (
@@ -128,8 +177,8 @@ export default function InputKpiPage() {
             const validValue = isNaN(rs) ? 0 : rs;
 
             let pct = 0;
-            if (ind.target_tahunan > 0) {
-              pct = (validValue / ind.target_tahunan) * 100;
+            if (currentTargetVal > 0) {
+              pct = (validValue / currentTargetVal) * 100;
             }
 
             let status = "Belum tercapai";
@@ -150,12 +199,16 @@ export default function InputKpiPage() {
 
       if (toSave.length > 0) {
         await saveCapaianMultiple(toSave);
+      }
+
+      if (toSave.length > 0 || targetsUpdated) {
         setOriginalInputs(inputs);
+        setOriginalTargets(targets);
         showSuccess();
-        // Reload to get fresh aggregations if needed
-        loadData(tahun);
+        // Reload to get fresh aggregations and dynamic calculations
+        await loadData(tahun);
       } else {
-        alert("Tidak ada perubahan untuk disave.");
+        alert("Tidak ada perubahan untuk disimpan.");
       }
     } catch (e: any) {
       alert("Gagal menyimpan data: " + e.message);
@@ -166,6 +219,7 @@ export default function InputKpiPage() {
 
   const handleReset = () => {
     setInputs(originalInputs);
+    setTargets(originalTargets);
   };
 
   const showSuccess = () => {
@@ -340,13 +394,16 @@ export default function InputKpiPage() {
                             if (!isNaN(val)) totalRealisasi += val;
                           }
 
+                          const currentTargetVal = parseFloat(targets[ind.id] || "0");
                           let progress =
-                            ind.target_tahunan > 0
-                              ? (totalRealisasi / ind.target_tahunan) * 100
+                            currentTargetVal > 0
+                              ? (totalRealisasi / currentTargetVal) * 100
                               : 0;
                           let status = "Belum tercapai";
                           if (progress >= 100) status = "Tercapai";
                           else if (progress >= 80) status = "Perlu perhatian";
+
+                          const isTargetChanged = (targets[ind.id] || "") !== (originalTargets[ind.id] || "");
 
                           return (
                             <tr
@@ -362,10 +419,25 @@ export default function InputKpiPage() {
                               <td className="px-1 py-2 text-center border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors">
                                 {ind.satuan}
                               </td>
-                              <td className="px-1 py-2 text-center border-r border-white/10 font-mono font-medium text-white bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors">
-                                {Number(
-                                  ind.target_tahunan || ind.target || 0,
-                                ).toLocaleString("id-ID")}
+                              <td className="px-1 py-1 text-center border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={targets[ind.id] || ""}
+                                  onChange={(e) => {
+                                    const v = e.target.value.replace(
+                                      /[^0-9.]/g,
+                                      "",
+                                    );
+                                    handleTargetChange(ind.id, v);
+                                  }}
+                                  placeholder="0"
+                                  className={`w-[85px] px-1 py-1 bg-black/40 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-purple text-center font-mono transition-colors ${
+                                    isTargetChanged
+                                      ? "border-primary-purple shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                                      : "border-white/5 focus:border-white/20"
+                                  }`}
+                                />
                               </td>
 
                               {/* 12 Months Input Fields */}
