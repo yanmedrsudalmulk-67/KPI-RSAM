@@ -28,24 +28,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-transparent text-gray-100 flex font-sans">
       {/* Sidebar Desktop */}
       <aside 
-        className={`sticky top-0 h-screen z-30 relative ${
+        className={`sticky top-0 h-screen z-40 relative ${
           isCollapsed ? "w-20" : "w-64"
-        } hidden md:flex flex-col sidebar-glass transition-all duration-150 ease-out will-change-[width]`}
+        } hidden md:flex flex-col sidebar-glass transition-[width] duration-300 cubic-bezier(0.16, 1, 0.3, 1) will-change-[width]`}
       >
 
 
-        <div className={`p-6 flex items-center gap-3 border-b border-white/5 transition-all duration-150 ${isCollapsed ? "justify-center px-4" : ""}`}>
+        <div className={`p-6 flex items-center gap-3 border-b border-white/5 transition-[padding,gap] duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isCollapsed ? "justify-center px-4 gap-0" : ""}`}>
           <RSLogo size={isCollapsed ? "small" : "large"} />
-          {!isCollapsed && (
-            <div className="flex flex-col whitespace-nowrap overflow-hidden transition-all duration-150">
-              <span className="font-poppins font-bold text-[13px] text-blue-50 tracking-wide drop-shadow-md">
-                UOBK RSUD AL-MULK
-              </span>
-              <span className="font-poppins font-medium text-[11px] text-[#8fff97] tracking-[0.1em] uppercase">
-                Kota Sukabumi
-              </span>
-            </div>
-          )}
+          <div className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-auto opacity-100"}`}>
+            <span className="font-poppins font-bold text-[13px] text-blue-50 tracking-wide drop-shadow-md">
+              UOBK RSUD AL-MULK
+            </span>
+            <span className="font-poppins font-medium text-[11px] text-[#8fff97] tracking-[0.1em] uppercase">
+              Kota Sukabumi
+            </span>
+          </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -117,13 +115,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             e.stopPropagation();
             setIsCollapsed(!isCollapsed);
           }}
-          className="absolute top-1/2 -translate-y-1/2 -right-6 w-6 h-16 bg-slate-950/95 hover:bg-slate-900 border-y border-r border-white/15 rounded-r-xl text-gray-300 hover:text-white flex items-center justify-center shadow-[6px_4px_16px_rgba(0,0,0,0.6)] cursor-pointer transition-all duration-200 z-50 group active:scale-95 focus:outline-none"
+          className="absolute top-1/2 -translate-y-1/2 -right-7 w-7 h-16 bg-slate-950/95 hover:bg-slate-900 border-y border-r border-white/20 rounded-r-2xl text-gray-200 hover:text-white flex items-center justify-center shadow-[8px_4px_24px_rgba(0,0,0,0.65)] cursor-pointer transition-all duration-300 z-50 group active:scale-90 focus:outline-none touch-action-manipulation"
           title={isCollapsed ? "Tampilkan Sidebar" : "Sembunyikan Sidebar"}
+          style={{ touchAction: "manipulation" }}
         >
           {isCollapsed ? (
-            <ChevronRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            <ChevronRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-0.5" />
           ) : (
-            <ChevronLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+            <ChevronLeft className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-0.5" />
           )}
         </button>
       </aside>
@@ -264,10 +263,10 @@ function NavItem({
   return (
     <Link 
       href={href}
-      className={`flex items-center group relative transition-all duration-150 ease-out will-change-[width] ${
+      className={`flex items-center group relative transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${
         isCollapsed 
-          ? "justify-center w-12 h-12 rounded-xl mx-auto" 
-          : "gap-3 px-4 py-3 rounded-xl w-full"
+          ? "justify-center px-0 py-0 w-12 h-12 rounded-xl mx-auto" 
+          : "px-4 py-3 rounded-xl w-full"
       } ${
         active 
           ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]" 
@@ -276,17 +275,23 @@ function NavItem({
             : "text-gray-400 hover:text-white hover:bg-white/5"
       }`}
     >
-      <div className={`w-5 h-5 flex items-center justify-center transition-transform duration-150 group-hover:scale-110 ${isCollapsed ? "mr-0" : ""} ${active ? "text-white animate-float-icon" : ""}`}>
+      <div className={`w-5 h-5 flex items-center justify-center flex-shrink-0 transition-transform duration-300 cubic-bezier(0.16, 1, 0.3, 1) group-hover:scale-110 ${active ? "text-white animate-float-icon" : ""}`}>
         {icon}
       </div>
       
-      {!isCollapsed ? (
-        <span className="font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis transition-opacity duration-150">{label}</span>
-      ) : (
-        <span className="absolute left-16 bg-dark-navy/80 backdrop-blur-md text-white text-xs font-medium px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap border border-white/10 z-50 shadow-xl">
-          {label}
-        </span>
-      )}
+      <span className={`font-medium text-sm whitespace-nowrap overflow-hidden text-ellipsis transition-all duration-300 cubic-bezier(0.16, 1, 0.3, 1) ${
+        isCollapsed 
+          ? "w-0 opacity-0 pointer-events-none ml-0" 
+          : "w-auto opacity-100 ml-3"
+      }`}>
+        {label}
+      </span>
+
+      <span className={`absolute left-16 bg-slate-950/95 backdrop-blur-md text-white text-xs font-medium px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap border border-white/10 z-50 shadow-xl ${
+        isCollapsed ? "block" : "hidden"
+      }`}>
+        {label}
+      </span>
     </Link>
   );
 }
