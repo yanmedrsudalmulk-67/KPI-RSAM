@@ -6,6 +6,7 @@ import {
   Save,
   FileCheck,
   RefreshCw,
+  ChevronDown,
   Download,
   AlertCircle,
   CheckCircle2,
@@ -31,12 +32,98 @@ const MONTHS = [
   "Des",
 ];
 
+interface RowItem {
+  id: string | number;
+  no: string | number;
+  name: string;
+  isHeader?: boolean;
+  ind?: any;
+}
+
+const getPilarRows = (pilarName: string, inds: any[]): RowItem[] => {
+  const rows: RowItem[] = [];
+  
+  const getRowNo = (id: number): string | number => {
+    const mapping: Record<number, string | number> = {
+      1: 1,
+      2: 2,
+      3: "",
+      4: "",
+      5: 4,
+      6: 5,
+      7: 6,
+      8: 7,
+      9: 8,
+      10: 9,
+      11: "",
+      12: "",
+      13: 11,
+      14: 12,
+      15: 13
+    };
+    return mapping[id] !== undefined ? mapping[id] : "";
+  };
+
+  let addedOptimalisasiAsetParent = false;
+  let addedCrossSellingParent = false;
+
+  inds.forEach((ind) => {
+    const rawName = ind.nama_indikator || ind.name || "";
+    
+    if (rawName.startsWith("Jumlah aset yang dimanfaatkan - ")) {
+      if (!addedOptimalisasiAsetParent) {
+        rows.push({
+          id: "parent-optimalisasi-aset",
+          no: 3,
+          name: "Jumlah aset yang dimanfaatkan",
+          isHeader: true
+        });
+        addedOptimalisasiAsetParent = true;
+      }
+      const subName = rawName.replace("Jumlah aset yang dimanfaatkan - ", "");
+      rows.push({
+        id: ind.id,
+        no: "",
+        name: subName,
+        ind
+      });
+    } else if (rawName.startsWith("Cross selling - ")) {
+      if (!addedCrossSellingParent) {
+        rows.push({
+          id: "parent-cross-selling",
+          no: 10,
+          name: "Cross selling",
+          isHeader: true
+        });
+        addedCrossSellingParent = true;
+      }
+      const subName = rawName.replace("Cross selling - ", "");
+      rows.push({
+        id: ind.id,
+        no: "",
+        name: subName,
+        ind
+      });
+    } else {
+      rows.push({
+        id: ind.id,
+        no: getRowNo(ind.id),
+        name: rawName,
+        ind
+      });
+    }
+  });
+
+  return rows;
+};
+
 export default function InputKpiPage() {
   const [tahun, setTahun] = useState<number>(new Date().getFullYear());
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [successMode, setSuccessMode] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("Data capaian KPI berhasil disimpan!");
 
   // Track inputs: { [indikatorId_bulan]: realisasi }
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -49,6 +136,11 @@ export default function InputKpiPage() {
   const [originalTargets, setOriginalTargets] = useState<Record<string, string>>(
     {},
   );
+
+  // Track existing capaian ids: { [indikatorId_bulan]: id }
+  const [capaianIds, setCapaianIds] = useState<Record<string, number>>({});
+  
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
     loadData(tahun);
@@ -88,14 +180,27 @@ export default function InputKpiPage() {
       // Populate initial inputs and targets
       const initial: Record<string, string> = {};
       const initialTargets: Record<string, string> = {};
+      const initialIds: Record<string, number> = {};
+      let latestDate: Date | null = null;
+      
       fetchedData.forEach((ind) => {
-        initialTargets[ind.id] = (ind.target_tahunan !== undefined && ind.target_tahunan !== null)
+        const rawTarget = (ind.target_tahunan !== undefined && ind.target_tahunan !== null)
           ? ind.target_tahunan.toString()
           : (ind.target || 0).toString();
+        initialTargets[ind.id] = formatValue(rawTarget, ind.satuan || "");
 
         if (ind.capaians) {
           ind.capaians.forEach((c: any) => {
-            initial[`${ind.id}_${c.bulan}`] = c.realisasi.toString();
+            const rawBulanan = (c.target_bulanan !== undefined && c.target_bulanan !== null) ? c.target_bulanan.toString() : "";
+            initial[`${ind.id}_${c.bulan}`] = formatValue(rawBulanan, ind.satuan || "");
+            initialIds[`${ind.id}_${c.bulan}`] = c.id;
+            
+            if (c.updated_at) {
+              const d = new Date(c.updated_at);
+              if (!latestDate || d > latestDate) {
+                latestDate = d;
+              }
+            }
           });
         }
       });
@@ -103,6 +208,8 @@ export default function InputKpiPage() {
       setOriginalInputs(initial);
       setTargets(initialTargets);
       setOriginalTargets(initialTargets);
+      setCapaianIds(initialIds);
+      setLastUpdated(latestDate);
     } catch (error) {
       console.error("Error loading data", error);
     } finally {
@@ -110,16 +217,69 @@ export default function InputKpiPage() {
     }
   }
 
+  // Helper functions for formatting based on Satuan
+  const formatValue = (value: string, satuan: string) => {
+    if (!value) return "";
+    const s = (satuan || "").toLowerCase();
+
+    if (s.includes("rupiah") || s.includes("rp")) {
+      let numStr = value.replace(/[^0-9]/g, "");
+      if (numStr) {
+        return "Rp" + parseInt(numStr, 10).toLocaleString("id-ID");
+      }
+      return "";
+    } else if (s.includes("persen") || s.includes("%")) {
+      let numStr = value.replace(/[^0-9.]/g, "");
+      if (numStr) {
+        if (parseFloat(numStr) > 100) numStr = "100";
+        if (value.endsWith('.') && !numStr.includes('.')) {
+          return numStr + ".%";
+        } else if (value.endsWith('.') && numStr.endsWith('.')) {
+          return numStr + "%"; // actually just let it be, but formatting with % makes it hard to type '.'
+        }
+        // Actually, if we just append %, what happens when they type `5.` -> `5.%`
+        return numStr + "%";
+      }
+      return "";
+    } else if (s.includes("orang") || s.includes("inovasi") || s.includes("posting")) {
+      return value.replace(/[^0-9]/g, "");
+    } else {
+      // hektar, indeks, dll (allow decimal)
+      let numStr = value.replace(/[^0-9.]/g, "");
+      const parts = numStr.split('.');
+      if (parts.length > 2) {
+        numStr = parts[0] + '.' + parts.slice(1).join('');
+      }
+      return numStr;
+    }
+  };
+
+  const parseRawValue = (value: string): number => {
+    if (!value) return 0;
+    let cleaned = value.replace(/Rp/g, '').replace(/%/g, '').trim();
+    if (value.includes("Rp")) {
+      cleaned = cleaned.replace(/\./g, '');
+    }
+    const rs = parseFloat(cleaned);
+    return isNaN(rs) ? 0 : rs;
+  };
+
   const handleInputChange = (
     indikatorId: number,
     bulan: number,
     value: string,
+    satuan: string
   ) => {
-    setInputs((prev) => ({ ...prev, [`${indikatorId}_${bulan}`]: value }));
+    let formatted = value;
+    // We only format if it doesn't end with . or , to allow decimal typing
+    // Actually, formatValue handles it somewhat, but for persen it appends %
+    // Let's use formatValue
+    formatted = formatValue(value, satuan);
+    setInputs((prev) => ({ ...prev, [`${indikatorId}_${bulan}`]: formatted }));
   };
 
-  const handleTargetChange = (indikatorId: number, value: string) => {
-    setTargets((prev) => ({ ...prev, [indikatorId]: value }));
+  const handleTargetChange = (indikatorId: number, value: string, satuan: string) => {
+    setTargets((prev) => ({ ...prev, [indikatorId]: formatValue(value, satuan) }));
   };
 
   const handleSave = async () => {
@@ -129,6 +289,20 @@ export default function InputKpiPage() {
         await new Promise((res) => setTimeout(res, 1000));
         setOriginalInputs(inputs);
         setOriginalTargets(targets);
+        
+        let simulatedUpdate = false;
+        data.forEach((ind) => {
+          for (let b = 1; b <= 12; b++) {
+            const key = `${ind.id}_${b}`;
+            if (inputs[key] !== originalInputs[key] && inputs[key] !== undefined) {
+              if (originalInputs[key] !== undefined && originalInputs[key] !== "") {
+                simulatedUpdate = true;
+              }
+            }
+          }
+        });
+
+        setSuccessMessage(simulatedUpdate ? "Data KPI lama berhasil diperbarui!" : "Data KPI baru berhasil disimpan!");
         showSuccess();
         setIsSaving(false);
         return;
@@ -139,8 +313,7 @@ export default function InputKpiPage() {
       data.forEach((ind) => {
         const key = ind.id.toString();
         if (targets[key] !== originalTargets[key] && targets[key] !== undefined) {
-          const targetVal = parseFloat(targets[key]);
-          const finalTarget = isNaN(targetVal) ? 0 : targetVal;
+          const finalTarget = parseRawValue(targets[key] || "");
           targetChangesToSave.push({
             id: ind.id,
             target_tahunan: finalTarget,
@@ -163,33 +336,41 @@ export default function InputKpiPage() {
         targetsUpdated = true;
       }
 
-      // 2. Detect realisasi changes and save them
+      // 2. Detect target_bulanan changes and save them
       const toSave: any[] = [];
+      let isUpdate = false;
       data.forEach((ind) => {
-        const currentTargetVal = parseFloat(targets[ind.id.toString()] || "0");
         for (let b = 1; b <= 12; b++) {
           const key = `${ind.id}_${b}`;
           if (
             inputs[key] !== originalInputs[key] &&
             inputs[key] !== undefined
           ) {
-            const rs = parseFloat(inputs[key]);
-            const validValue = isNaN(rs) ? 0 : rs;
+            const validValue = parseRawValue(inputs[key] || "");
+
+            const existingCapaian = ind.capaians?.find((c: any) => c.bulan === b);
+            const currentRealisasi = existingCapaian ? Number(existingCapaian.realisasi) : 0;
 
             let pct = 0;
-            if (currentTargetVal > 0) {
-              pct = (validValue / currentTargetVal) * 100;
+            if (validValue > 0) {
+              pct = (currentRealisasi / validValue) * 100;
             }
 
             let status = "Belum tercapai";
             if (pct >= 100) status = "Tercapai";
             else if (pct >= 80) status = "Perlu perhatian";
 
+            const capaianId = capaianIds[key];
+            if (capaianId) {
+              isUpdate = true;
+            }
+
             toSave.push({
+              ...(capaianId ? { id: capaianId } : {}),
               indikator_id: ind.id,
               bulan: b,
               tahun: tahun,
-              realisasi: validValue,
+              target_bulanan: validValue,
               persentase: pct,
               status: status,
             });
@@ -202,6 +383,18 @@ export default function InputKpiPage() {
       }
 
       if (toSave.length > 0 || targetsUpdated) {
+        let msg = "Data capaian KPI berhasil disimpan!";
+        if (toSave.length > 0) {
+          if (isUpdate) {
+            msg = "Data KPI lama berhasil diperbarui!";
+          } else {
+            msg = "Data KPI baru berhasil disimpan!";
+          }
+        } else if (targetsUpdated) {
+          msg = "Target tahunan KPI berhasil diperbarui!";
+        }
+        setSuccessMessage(msg);
+
         setOriginalInputs(inputs);
         setOriginalTargets(targets);
         showSuccess();
@@ -211,7 +404,11 @@ export default function InputKpiPage() {
         alert("Tidak ada perubahan untuk disimpan.");
       }
     } catch (e: any) {
-      alert("Gagal menyimpan data: " + e.message);
+      if (e.message?.includes("target_bulanan") && e.message?.includes("column")) {
+        alert("PENTING: Database Anda perlu diperbarui. Kolom 'target_bulanan' tidak ditemukan. Silakan jalankan script SQL terbaru di Supabase SQL Editor Anda.");
+      } else {
+        alert("Gagal menyimpan data: " + e.message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -242,7 +439,7 @@ export default function InputKpiPage() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-8 relative">
         <h1 className="text-xl md:text-3xl font-extrabold font-poppins bg-gradient-to-r from-blue-400 via-primary-purple to-primary-pink bg-clip-text text-transparent tracking-tight">
-          KEY PERFORMANCE INDICATOR (KPI) BULANAN
+          TARGET KEY PERFORMANCE INDICATOR (KPI)
         </h1>
         <h2 className="text-lg md:text-xl font-bold text-white mt-1">
           UOBK RSUD AL-MULK KOTA SUKABUMI
@@ -253,28 +450,42 @@ export default function InputKpiPage() {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
-        <div className="flex items-center gap-3 bg-dark-navy p-1.5 rounded-xl border border-white/10 w-full md:w-auto">
-          <label className="text-sm font-medium text-gray-300 pl-2">
-            Pilih Tahun:
-          </label>
-          <select
-            value={tahun}
-            onChange={(e) => setTahun(parseInt(e.target.value))}
-            className="px-4 py-2 bg-black/30 border border-white/5 rounded-lg text-white focus:outline-none focus:border-primary-purple transition-colors appearance-none min-w-[120px]"
-          >
-            {[2024, 2025, 2026, 2027].map((y) => (
-              <option key={y} value={y} className="bg-dark-navy">
-                {y}
-              </option>
-            ))}
-          </select>
+        {/* Animated Border Container */}
+        <div className="relative p-[2px] rounded-full overflow-hidden group w-full md:w-max">
+          {/* Rotating gradient background */}
+          <div className="absolute inset-[-1000%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#4facfe_25%,#f093fb_50%,#f5576c_75%,transparent_100%)] opacity-80" />
+          
+          <div className="relative overflow-hidden flex items-center gap-2 bg-[#0b1120] rounded-full p-1 px-3 w-full md:w-auto backdrop-blur-xl z-10 transition-all duration-300 hover:scale-[1.02] shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            <label className="text-xs font-medium text-gray-300 pl-1">
+              Pilih Tahun:
+            </label>
+            <div className="relative flex items-center">
+              <select
+                value={tahun}
+                onChange={(e) => setTahun(parseInt(e.target.value))}
+                className="px-3 py-1.5 pr-6 bg-black/30 border border-white/5 rounded-lg text-white focus:outline-none focus:border-white/20 transition-colors appearance-none min-w-[90px] text-xs font-semibold tracking-wide cursor-pointer"
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y} className="bg-[#0f172a] text-white">
+                    {y}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-white/70 absolute right-2 pointer-events-none" />
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col md:flex-row items-end md:items-center gap-3 w-full md:w-auto">
+          {lastUpdated && (
+            <div className="text-xs text-gray-400 mr-2">
+              Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
+            </div>
+          )}
           <button
             disabled={isSaving}
             onClick={handleSave}
-            className="flex flex-1 justify-center items-center gap-2 px-6 py-2 bg-gradient-to-r from-primary-cyan to-blue-500 rounded-lg text-sm text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 min-w-[160px]"
+            className="flex flex-1 md:flex-none justify-center items-center gap-2 px-6 py-2 bg-gradient-to-r from-primary-cyan to-blue-500 rounded-lg text-sm text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 min-w-[160px]"
           >
             {isSaving ? (
               <span className="animate-spin text-lg block w-4 h-4 rounded-full border-2 border-white/20 border-t-white" />
@@ -290,7 +501,7 @@ export default function InputKpiPage() {
         <div className="bg-primary-green/10 border border-primary-green/20 p-4 rounded-xl flex items-center justify-center gap-3 animate-in fade-in zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95">
           <CheckCircle2 className="w-6 h-6 text-primary-green" />
           <p className="text-primary-green font-medium">
-            Data capaian KPI berhasil disimpan!
+            {successMessage}
           </p>
         </div>
       )}
@@ -308,36 +519,36 @@ export default function InputKpiPage() {
       <div className="p-1 rounded-2xl bg-gradient-to-br from-primary-purple/20 via-transparent to-primary-cyan/20">
         <div className="bg-[#131B2A] rounded-xl overflow-hidden border border-white/5 shadow-2xl relative">
           <div className="overflow-x-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-            <table className="w-full text-left text-[10px] sm:text-[11px] whitespace-nowrap">
-              <thead className="sticky top-0 z-30 bg-gradient-to-r from-primary-purple/40 to-blue-900/40 backdrop-blur-md text-white">
+            <table className="w-full text-left text-[11px] sm:text-xs whitespace-nowrap table-fixed">
+              <thead className="sticky top-0 z-30 bg-[#310554] backdrop-blur-md text-white">
                 <tr>
-                  <th className="px-1 py-3 font-semibold text-center border-b border-r border-white/10 w-8">
+                  <th className="sticky top-0 left-0 z-40 bg-[#310554] px-2 py-3 font-semibold text-center border-b border-r border-white/10 w-12 min-w-[48px] max-w-[48px]">
                     NO
                   </th>
-                  <th className="px-2 py-3 font-semibold border-b border-r border-white/10 w-48">
+                  <th className="sticky top-0 left-[48px] z-40 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 w-[240px] min-w-[240px] max-w-[240px]">
                     URAIAN KPI
                   </th>
-                  <th className="px-1 py-3 font-semibold text-center border-b border-r border-white/10 w-12">
-                    SAT
+                  <th className="sticky top-0 left-[288px] z-40 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-24 min-w-[96px] max-w-[96px]">
+                    SATUAN
                   </th>
-                  <th className="px-1 py-3 font-semibold text-center border-b border-r border-white/10 w-16">
-                    TARGET
+                  <th className="sticky top-0 left-[384px] z-40 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-[150px] min-w-[150px] max-w-[150px] text-[11px] leading-tight tracking-tight uppercase">
+                    TARGET TAHUNAN
                   </th>
                   {MONTHS.map((m, idx) => (
                     <th
                       key={m}
-                      className={`px-1 py-3 font-semibold text-center border-b border-r border-white/10 w-min ${idx % 2 === 0 ? "bg-white/5" : ""}`}
+                      className={`sticky top-0 z-30 px-2 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[160px] w-44 ${idx % 2 === 0 ? "bg-[#581c87]" : "bg-[#310554]"}`}
                     >
                       {m.toUpperCase()}
                     </th>
                   ))}
-                  <th className="px-1 py-3 font-semibold text-center border-b border-white/10 bg-primary-cyan/10 w-16">
+                  <th className="sticky top-0 z-30 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[140px] w-40">
                     TOTAL
                   </th>
-                  <th className="px-1 py-3 font-semibold text-center border-b border-white/10 bg-primary-cyan/10 w-12">
+                  <th className="sticky top-0 z-30 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[90px] w-24">
                     %
                   </th>
-                  <th className="px-1 py-3 font-semibold text-center border-b border-white/10 w-20">
+                  <th className="sticky top-0 z-30 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-white/10 min-w-[140px] w-40">
                     STATUS
                   </th>
                 </tr>
@@ -359,9 +570,9 @@ export default function InputKpiPage() {
                     ([pilarName, inds], groupIndex) => (
                       <React.Fragment key={pilarName}>
                         {/* Pilar Header Row */}
-                        <tr className="bg-white/5">
-                          <td className="px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1C253B]"></td>
-                          <td className="px-2 py-2 font-bold text-white border-r border-white/10 bg-[#1C253B] uppercase">
+                        <tr className="bg-[#1a0f2b]">
+                          <td className="sticky left-0 z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-12 min-w-[48px] max-w-[48px]"></td>
+                          <td className="sticky left-[48px] z-20 px-4 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] uppercase whitespace-normal leading-tight text-[10px] w-[240px] min-w-[240px] max-w-[240px]">
                             {pilarName.includes(
                               "DAN PROGRAM PRIORITAS LAINNYA",
                             ) ? (
@@ -377,27 +588,69 @@ export default function InputKpiPage() {
                               pilarName
                             )}
                           </td>
-                          <td className="px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1C253B]"></td>
-                          <td className="px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1C253B]"></td>
+                          <td className="sticky left-[288px] z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-24 min-w-[96px] max-w-[96px]"></td>
+                          <td className="sticky left-[384px] z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-[150px] min-w-[150px] max-w-[150px]"></td>
                           <td
-                            className="px-1 py-2 border-r border-white/10 bg-[#1C253B]"
+                            className="px-1 py-2 border-r border-white/10 bg-[#1a0f2b]"
                             colSpan={15}
                           ></td>
                         </tr>
                         {/* Indicators Rows */}
-                        {inds.map((ind, indIdx) => {
-                          let totalRealisasi = 0;
-                          for (let b = 1; b <= 12; b++) {
-                            const val = parseFloat(
-                              inputs[`${ind.id}_${b}`] || "0",
+                        {getPilarRows(pilarName, inds).map((rowItem, rowIdx) => {
+                          const isEven = rowIdx % 2 === 0;
+                          const rowBgClass = isEven ? "bg-[#140e24]" : "bg-[#1e1433]";
+                          const stickyBgClass = isEven ? "bg-[#140e24]" : "bg-[#1e1433]";
+                          const stickyHoverClass = isEven ? "group-hover:bg-[#201738]" : "group-hover:bg-[#2c1d4a]";
+
+                          if (rowItem.isHeader) {
+                            return (
+                              <tr key={rowItem.id} className="bg-[#24133d] group border-b border-white/5">
+                                <td className="sticky left-0 z-10 px-2 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-300 font-mono text-[11px] sm:text-xs w-12 min-w-[48px] max-w-[48px]">
+                                  {rowItem.no}
+                                </td>
+                                <td className="sticky left-[48px] z-10 px-4 py-3 border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-white font-bold text-[11px] w-[240px] min-w-[240px] max-w-[240px] whitespace-normal leading-relaxed text-left pl-4">
+                                  {rowItem.name}
+                                </td>
+                                <td className="sticky left-[288px] z-10 px-3 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-500 text-[11px] sm:text-xs w-24 min-w-[96px] max-w-[96px]">
+                                  -
+                                </td>
+                                <td className="sticky left-[384px] z-10 px-3 py-2 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all w-[150px] min-w-[150px] max-w-[150px]">
+                                  -
+                                </td>
+                                {MONTHS.map((_, mIdx) => (
+                                  <td
+                                    key={mIdx}
+                                    className={`px-2 py-2 border-r border-white/10 text-center text-gray-500 font-mono text-xs min-w-[160px] w-44 ${mIdx % 2 === 0 ? "bg-[#291745]" : "bg-[#201038]"}`}
+                                  >
+                                    -
+                                  </td>
+                                ))}
+                                <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-semibold text-gray-500 text-[11px] sm:text-xs min-w-[140px] w-40 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                  -
+                                </td>
+                                <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-bold text-gray-500 text-[11px] sm:text-xs min-w-[90px] w-24 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                  -
+                                </td>
+                                <td className="px-3 py-3 text-center min-w-[140px] w-40 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                  -
+                                </td>
+                              </tr>
                             );
-                            if (!isNaN(val)) totalRealisasi += val;
                           }
 
-                          const currentTargetVal = parseFloat(targets[ind.id] || "0");
+                          const ind = rowItem.ind;
+                          let totalTargetBulanan = 0;
+                          for (let b = 1; b <= 12; b++) {
+                            const val = parseRawValue(
+                              inputs[`${ind.id}_${b}`] || "",
+                            );
+                            if (!isNaN(val)) totalTargetBulanan += val;
+                          }
+
+                          const currentTargetVal = parseRawValue(targets[ind.id] || "");
                           let progress =
                             currentTargetVal > 0
-                              ? (totalRealisasi / currentTargetVal) * 100
+                              ? (totalTargetBulanan / currentTargetVal) * 100
                               : 0;
                           let status = "Belum tercapai";
                           if (progress >= 100) status = "Tercapai";
@@ -405,38 +658,40 @@ export default function InputKpiPage() {
 
                           const isTargetChanged = (targets[ind.id] || "") !== (originalTargets[ind.id] || "");
 
+                          // Determine placeholder based on Satuan
+                          const s = (ind.satuan || "").toLowerCase();
+                          let placeholder = "0";
+                          if (s.includes("orang")) placeholder = "Jml orang";
+                          else if (s.includes("persen") || s.includes("%")) placeholder = "%";
+                          else if (s.includes("rupiah") || s.includes("rp")) placeholder = "Rp 0";
+                          else if (s.includes("hektar")) placeholder = "Luas";
+
+                          const isSubItem = rowItem.no === "";
+
                           return (
                             <tr
                               key={ind.id}
-                              className="hover:bg-white/5 transition-colors group"
+                              className={`${rowBgClass} transition-colors group`}
                             >
-                              <td className="px-1 py-2 text-center border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors text-gray-500 font-mono">
-                                {indIdx + 1}
+                              <td className={`sticky left-0 z-10 px-2 py-3 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all text-gray-400 font-mono text-[11px] sm:text-xs w-12 min-w-[48px] max-w-[48px]`}>
+                                {rowItem.no}
                               </td>
-                              <td className="px-2 py-2 border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors whitespace-normal min-w-[150px] max-w-[200px] leading-tight">
-                                {ind.nama_indikator || ind.name}
+                              <td className={`sticky left-[48px] z-10 px-4 py-3 border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all whitespace-normal w-[240px] min-w-[240px] max-w-[240px] leading-relaxed text-left font-medium ${isSubItem ? "pl-8 text-gray-300 font-normal text-[10px]" : "pl-4 text-white font-semibold text-[11px]"}`}>
+                                {rowItem.name}
                               </td>
-                              <td className="px-1 py-2 text-center border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors">
+                              <td className={`sticky left-[288px] z-10 px-3 py-3 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all text-gray-200 text-[11px] sm:text-xs font-semibold w-24 min-w-[96px] max-w-[96px]`}>
                                 {ind.satuan}
                               </td>
-                              <td className="px-1 py-1 text-center border-r border-white/10 bg-[#151D2A] group-hover:bg-[#1A2333] transition-colors">
+                              <td className={`sticky left-[384px] z-10 px-3 py-2 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all w-[150px] min-w-[150px] max-w-[150px]`}>
                                 <input
                                   type="text"
                                   inputMode="decimal"
                                   value={targets[ind.id] || ""}
                                   onChange={(e) => {
-                                    const v = e.target.value.replace(
-                                      /[^0-9.]/g,
-                                      "",
-                                    );
-                                    handleTargetChange(ind.id, v);
+                                    handleTargetChange(ind.id, e.target.value, ind.satuan || "");
                                   }}
-                                  placeholder="0"
-                                  className={`w-[85px] px-1 py-1 bg-black/40 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-purple text-center font-mono transition-colors ${
-                                    isTargetChanged
-                                      ? "border-primary-purple shadow-[0_0_8px_rgba(139,92,246,0.3)]"
-                                      : "border-white/5 focus:border-white/20"
-                                  }`}
+                                  placeholder={placeholder}
+                                  className="w-[130px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50 text-[11px] sm:text-xs"
                                 />
                               </td>
 
@@ -449,39 +704,31 @@ export default function InputKpiPage() {
                                 return (
                                   <td
                                     key={b}
-                                    className={`px-1 py-1 border-r border-white/10 ${mIdx % 2 === 0 ? "bg-white/[0.02]" : ""}`}
+                                    className={`px-2 py-2 border-r border-white/10 text-center min-w-[160px] w-44 ${mIdx % 2 === 0 ? "bg-white/[0.02]" : ""}`}
                                   >
                                     <input
                                       type="text"
                                       inputMode="decimal"
                                       value={val}
                                       onChange={(e) => {
-                                        const v = e.target.value.replace(
-                                          /[^0-9.]/g,
-                                          "",
-                                        );
-                                        handleInputChange(ind.id, b, v);
+                                        handleInputChange(ind.id, b, e.target.value, ind.satuan || "");
                                       }}
                                       placeholder="-"
-                                      className={`w-[40px] px-1 py-1 bg-black/40 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-colors ${
-                                        isChanged
-                                          ? "border-primary-cyan shadow-[0_0_8px_rgba(6,182,212,0.3)]"
-                                          : "border-white/5 focus:border-white/20"
-                                      }`}
+                                      className="w-[140px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50 text-[11px] sm:text-xs"
                                     />
                                   </td>
                                 );
                               })}
 
-                              <td className="px-1 py-2 text-right border-x border-white/10 font-mono font-medium text-cyan-400 bg-primary-cyan/5">
-                                {totalRealisasi.toLocaleString("id-ID")}
+                              <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-semibold text-gray-100 text-[11px] sm:text-xs min-w-[140px] w-40">
+                                {formatValue(totalTargetBulanan.toString(), ind.satuan || "") || "0"}
                               </td>
-                              <td className="px-1 py-2 text-right border-r border-white/10 font-mono font-bold text-white bg-primary-cyan/5">
+                              <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-bold text-white text-[11px] sm:text-xs min-w-[90px] w-24">
                                 {progress.toFixed(1)}%
                               </td>
-                              <td className="px-1 py-2 text-center">
+                              <td className="px-3 py-3 text-center min-w-[140px] w-40">
                                 <span
-                                  className={`inline-block px-1.5 py-0.5 flex items-center justify-center text-[9px] rounded-full whitespace-nowrap ${
+                                  className={`inline-block px-2 py-1 flex items-center justify-center text-[10px] sm:text-[11px] font-semibold rounded-full whitespace-nowrap ${
                                     status === "Tercapai"
                                       ? "bg-primary-green/10 text-primary-green"
                                       : status === "Perlu perhatian"

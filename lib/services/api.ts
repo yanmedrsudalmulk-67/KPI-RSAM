@@ -58,7 +58,7 @@ export async function getIndicatorsByPilar(pilarId: number) {
   })) as IndikatorKPI[];
 }
 
-export async function getPilarDetail(pilarId: number) {
+export async function getPilarDetail(pilarId: number, tahun?: number) {
   if (!isSupabaseConfigured()) return { pilar: null, indicators: [] };
   
   const foundPilar = pilarKpi.find((p) => p.id === pilarId);
@@ -72,24 +72,28 @@ export async function getPilarDetail(pilarId: number) {
     .order('id', { ascending: true });
   if (err2) throw err2;
 
-  // Process indicators to extract latest capaian (just using the highest id for now or latest month/year)
+  const targetYear = tahun || new Date().getFullYear();
+
+  // Process indicators to extract latest capaian for the target year
   const processed = (indicators || []).map(ind => {
     let latestCapaian = null;
     let totalRealisasi = 0;
-    if (ind.capaian_kpi && ind.capaian_kpi.length > 0) {
-      // Sort by tahun desc, bulan desc
-      const sorted = ind.capaian_kpi.sort((a: any, b: any) => {
-        if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-        return b.bulan - a.bulan;
-      });
+    
+    // Filter capaian_kpi by targetYear
+    const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear);
+
+    if (filteredCapaianKpi.length > 0) {
+      // Sort by bulan desc
+      const sorted = [...filteredCapaianKpi].sort((a: any, b: any) => b.bulan - a.bulan);
       latestCapaian = sorted[0];
-      totalRealisasi = ind.capaian_kpi.reduce((sum: number, c: any) => sum + Number(c.realisasi), 0);
+      totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => sum + Number(c.realisasi), 0);
     }
 
     let progress = 0;
     let status = "Belum tercapai";
     if (ind.target_tahunan > 0) {
        progress = (totalRealisasi / ind.target_tahunan) * 100;
+       if (progress > 100) progress = 100; // Cap at 100% per indicator
        if (progress >= 100) status = "Tercapai";
        else if (progress >= 80) status = "Perlu perhatian";
     }
@@ -97,9 +101,10 @@ export async function getPilarDetail(pilarId: number) {
     return {
       ...ind,
       nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+      capaian_kpi: ind.capaian_kpi, // Keep all-years list for table reference
       latestCapaian,
       totalRealisasi,
-      progress,
+      progress: Number(progress.toFixed(1)),
       status
     };
   });
@@ -217,8 +222,40 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
     .select('*')
     .order('id', { ascending: true });
   
-  if (errInd || !indicators || indicators.length === 0) {
-     return []; // Return empty so the frontend can fallback to mock data
+  if (errInd) {
+    return []; // Return empty so the frontend can fallback to mock data
+  }
+
+  let finalIndicators = indicators || [];
+
+  // Seed data if empty
+  if (finalIndicators.length === 0) {
+    const seedData = pilarKpi.flatMap(p => 
+      (p as any).indicators?.map((ind: any) => ({
+        nomor: ind.id,
+        pilar: p.name,
+        uraian_kpi: ind.name,
+        satuan: ind.target > 1000 ? 'Rupiah' : (ind.target === 100 ? 'Persen' : 'Orang'),
+        target_tahunan: ind.target,
+        keterangan: ''
+      })) || []
+    );
+
+    // Only if we actually have seed data
+    if (seedData.length > 0) {
+      const { data: inserted, error: seedErr } = await supabase!
+        .from('indikator_kpi')
+        .insert(seedData)
+        .select();
+      
+      if (!seedErr && inserted) {
+        finalIndicators = inserted;
+      }
+    }
+  }
+
+  if (finalIndicators.length === 0) {
+    return [];
   }
 
   const { data: capaians, error: errCap } = await supabase!
@@ -228,7 +265,7 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
   
   const capData = capaians || [];
 
-  return indicators.map(ind => {
+  return finalIndicators.map(ind => {
     const indCapaians = capData.filter(c => c.indikator_id === ind.id);
     const pilarName = ind.pilar || '';
 
@@ -247,16 +284,42 @@ export async function saveCapaianMultiple(dataArray: Partial<CapaianKPI>[]) {
     throw new Error('Supabase is not configured.');
   }
 
-  const { data: result, error } = await supabase!.from('capaian_kpi').upsert(
-    dataArray.map(d => ({
-      ...d,
-      updated_at: new Date().toISOString()
-    })), 
-    { onConflict: 'indikator_id,bulan,tahun' }
-  ).select();
+  const results = [];
+  for (const item of dataArray) {
+    const payload = { ...item, updated_at: new Date().toISOString() };
+    
+    // Attempt to update first using unique constraint (indikator_id, tahun, bulan)
+    const { data: updateData, error: updateError } = await supabase!
+      .from('capaian_kpi')
+      .update(payload)
+      .eq('indikator_id', item.indikator_id as number)
+      .eq('tahun', item.tahun as number)
+      .eq('bulan', item.bulan as number)
+      .select();
 
-  if (error) throw error;
-  return result;
+    if (updateError) {
+      console.error("Supabase update error:", updateError);
+      throw new Error(`DB Error: ${updateError.message}`);
+    }
+
+    // If update affected 0 rows, it means the row doesn't exist, so insert it
+    if (!updateData || updateData.length === 0) {
+      const { data: insertData, error: insertError } = await supabase!
+        .from('capaian_kpi')
+        .insert([payload])
+        .select();
+      
+      if (insertError) {
+        console.error("Supabase insert error:", insertError);
+        throw new Error(`DB Error: ${insertError.message}`);
+      }
+      if (insertData) results.push(insertData[0]);
+    } else {
+      results.push(updateData[0]);
+    }
+  }
+
+  return results;
 }
 
 export async function uploadDokumenRealisasi(file: File): Promise<string> {
@@ -288,11 +351,34 @@ export async function saveCapaian(data: Partial<CapaianKPI>) {
     throw new Error('Supabase is not configured. Please add SUPABASE_URL and SUPABASE_ANON_KEY to .env');
   }
 
-  const { data: result, error } = await supabase!.from('capaian_kpi').upsert({
-    ...data,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'indikator_id,bulan,tahun' }).select();
+  const payload = { ...data, updated_at: new Date().toISOString() };
+  
+  // Attempt update first
+  const { data: updateData, error: updateError } = await supabase!
+    .from('capaian_kpi')
+    .update(payload)
+    .eq('indikator_id', data.indikator_id as number)
+    .eq('tahun', data.tahun as number)
+    .eq('bulan', data.bulan as number)
+    .select();
 
-  if (error) throw error;
-  return result;
+  if (updateError) {
+    console.error("Supabase update error:", updateError);
+    throw new Error(`DB Error: ${updateError.message}`);
+  }
+
+  if (!updateData || updateData.length === 0) {
+    const { data: insertData, error: insertError } = await supabase!
+      .from('capaian_kpi')
+      .insert([payload])
+      .select();
+    
+    if (insertError) {
+      console.error("Supabase insert error:", insertError);
+      throw new Error(`DB Error: ${insertError.message}`);
+    }
+    return insertData?.[0];
+  }
+
+  return updateData[0];
 }

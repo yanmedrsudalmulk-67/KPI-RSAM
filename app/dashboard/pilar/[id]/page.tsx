@@ -47,6 +47,16 @@ export default function PilarDetail({
   );
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTahun = params.get("tahun");
+      if (urlTahun) {
+        setSelectedGraphTahun(urlTahun);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (indicators.length > 0 && !selectedGraphIndikator) {
       setSelectedGraphIndikator(indicators[0].id.toString());
     }
@@ -57,7 +67,7 @@ export default function PilarDetail({
       let isMock = !isSupabaseConfigured();
       if (isSupabaseConfigured()) {
         try {
-          const { pilar: p, indicators: ind } = await getPilarDetail(pilarId);
+          const { pilar: p, indicators: ind } = await getPilarDetail(pilarId, parseInt(selectedGraphTahun));
           if (!p) {
             isMock = true;
           } else {
@@ -76,7 +86,7 @@ export default function PilarDetail({
         const foundPilar = pilarKpi.find((p) => p.id === pilarId);
         if (foundPilar) {
           setPilar({ ...foundPilar, nama_pilar: foundPilar.name });
-          const currYear = new Date().getFullYear();
+          const currYear = parseInt(selectedGraphTahun) || new Date().getFullYear();
           setIndicators(
             indKpi
               .filter((i) => i.pilarId === pilarId)
@@ -128,7 +138,7 @@ export default function PilarDetail({
       setLoading(false);
     }
     load();
-  }, [pilarId]);
+  }, [pilarId, selectedGraphTahun]);
 
   const selectedIndObj = indicators.find(
     (i) => i.id.toString() === selectedGraphIndikator,
@@ -313,8 +323,8 @@ export default function PilarDetail({
                     {Number(ind.target_tahunan || 0).toLocaleString("id-ID")}
                   </td>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((bulan) => {
-                    const capList = ind.capaian_kpi || ind.capaians || [];
-                    const cap = capList.find((c: any) => c.bulan === bulan);
+                    const capList = ind.capaian_kpi || ind.capains || [];
+                    const cap = capList.find((c: any) => c.bulan === bulan && c.tahun === parseInt(selectedGraphTahun));
                     const val = cap ? cap.realisasi : null;
                     return (
                       <td

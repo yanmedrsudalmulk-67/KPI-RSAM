@@ -169,7 +169,7 @@ export default function DashboardPage() {
                 <div className={`h-full rounded-full bg-gradient-to-r ${pilar.color}`} style={{ width: `${pilar.progress}%` }} />
               </div>
               
-              <Link href={`/dashboard/pilar/${pilar.id}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
+              <Link href={`/dashboard/pilar/${pilar.id}?tahun=${tahun}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
                 Lihat Detail <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>

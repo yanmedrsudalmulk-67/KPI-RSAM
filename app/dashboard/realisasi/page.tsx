@@ -38,6 +38,29 @@ const MONTHS = [
   "Desember",
 ];
 
+const formatIndicatorName = (name: string) => {
+  if (!name) return null;
+  if (name.includes("Jumlah aset yang dimanfaatkan - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-xs font-medium">Jumlah aset yang dimanfaatkan :</span>
+        <span className="text-white font-semibold text-sm leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  if (name.includes("Cross selling - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-xs font-medium">Cross selling :</span>
+        <span className="text-white font-semibold text-sm leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  return <span className="text-white font-semibold text-sm leading-normal">{name}</span>;
+};
+
 export default function LaporanRealisasiPage() {
   const [tahun, setTahun] = useState<number>(new Date().getFullYear());
   const [bulan, setBulan] = useState<number>(new Date().getMonth() + 1);
@@ -98,6 +121,47 @@ export default function LaporanRealisasiPage() {
     }
   }
 
+  // Helper functions for formatting based on Satuan
+  const formatValue = (value: string, satuan: string) => {
+    if (!value) return "";
+    const s = (satuan || "").toLowerCase();
+
+    if (s.includes("rupiah") || s.includes("rp")) {
+      let numStr = value.replace(/[^0-9]/g, "");
+      if (numStr) {
+        return "Rp" + parseInt(numStr, 10).toLocaleString("id-ID");
+      }
+      return "";
+    } else if (s.includes("persen") || s.includes("%")) {
+      let numStr = value.replace(/[^0-9.]/g, "");
+      if (numStr) {
+        if (parseFloat(numStr) > 100) numStr = "100";
+        if (value.endsWith('.') && !numStr.includes('.')) return numStr + ".%";
+        return numStr + "%";
+      }
+      return "";
+    } else if (s.includes("orang") || s.includes("inovasi") || s.includes("posting")) {
+      return value.replace(/[^0-9]/g, "");
+    } else {
+      let numStr = value.replace(/[^0-9.]/g, "");
+      const parts = numStr.split('.');
+      if (parts.length > 2) {
+        numStr = parts[0] + '.' + parts.slice(1).join('');
+      }
+      return numStr;
+    }
+  };
+
+  const parseRawValue = (value: string): number => {
+    if (!value) return 0;
+    let cleaned = value.replace(/Rp/g, '').replace(/%/g, '').trim();
+    if (value.includes("Rp")) {
+      cleaned = cleaned.replace(/\./g, '');
+    }
+    const rs = parseFloat(cleaned);
+    return isNaN(rs) ? 0 : rs;
+  };
+
   const handleOpenModal = (ind: any) => {
     setSelectedIndikator(ind);
 
@@ -108,7 +172,7 @@ export default function LaporanRealisasiPage() {
 
     if (existingCapaian) {
       setHasExistingData(true);
-      setInputRealisasi(existingCapaian.realisasi.toString());
+      setInputRealisasi(formatValue(existingCapaian.realisasi.toString(), ind.satuan || ""));
       setDokumenUrl(existingCapaian.dokumen_url || "");
     } else {
       setHasExistingData(false);
@@ -127,12 +191,19 @@ export default function LaporanRealisasiPage() {
     setIsSaving(true);
 
     try {
-      const rs = parseFloat(inputRealisasi);
-      const validValue = isNaN(rs) ? 0 : rs;
+      const validValue = parseRawValue(inputRealisasi);
+
+      const currentCapaian = selectedIndikator.capaians?.find(
+        (c: any) => c.bulan === bulan && c.tahun === tahun,
+      );
+
+      const targetBulanan = currentCapaian?.target_bulanan !== undefined
+        ? Number(currentCapaian.target_bulanan)
+        : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0);
 
       let pct = 0;
-      if (selectedIndikator.target_tahunan > 0) {
-        pct = (validValue / selectedIndikator.target_tahunan) * 100;
+      if (targetBulanan > 0) {
+        pct = (validValue / targetBulanan) * 100;
       }
 
       let status = "Belum tercapai";
@@ -149,6 +220,7 @@ export default function LaporanRealisasiPage() {
         indikator_id: selectedIndikator.id,
         bulan: bulan,
         tahun: tahun,
+        target_bulanan: targetBulanan,
         realisasi: validValue,
         persentase: pct,
         status: status,
@@ -165,7 +237,11 @@ export default function LaporanRealisasiPage() {
       setIsModalOpen(false);
       showSuccessNotif();
     } catch (e: any) {
-      alert("Gagal menyimpan data: " + e.message);
+      if (e.message?.includes("target_bulanan") && e.message?.includes("column")) {
+        alert("PENTING: Database Anda perlu diperbarui. Kolom 'target_bulanan' tidak ditemukan. Silakan jalankan script SQL terbaru di Supabase SQL Editor Anda.");
+      } else {
+        alert("Gagal menyimpan data: " + e.message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -244,8 +320,10 @@ export default function LaporanRealisasiPage() {
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-purple/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-        <h1 className="text-2xl md:text-4xl font-extrabold font-poppins bg-gradient-to-r from-blue-400 via-primary-purple to-primary-pink bg-clip-text text-transparent tracking-tight relative z-10">
-          INPUT REALISASI KEY PERFORMANCE INDICATOR (KPI)
+        <h1 className="text-2xl md:text-4xl font-extrabold font-poppins bg-gradient-to-r from-blue-400 via-primary-purple to-primary-pink bg-clip-text text-transparent tracking-tight relative z-10 leading-tight">
+          INPUT REALISASI
+          <br />
+          KEY PERFORMANCE INDICATOR (KPI)
         </h1>
         <h2 className="text-lg md:text-xl font-bold text-white mt-2 relative z-10">
           UOBK RSUD AL-MULK KOTA SUKABUMI
@@ -354,21 +432,23 @@ export default function LaporanRealisasiPage() {
                   );
                   const isInputted = !!currentCapaian;
 
-                  // Calculate target bulanan (estimated)
+                  // Calculate target bulanan
                   const targetTahunan = Number(ind.target_tahunan || 0);
                   const targetBulanan =
-                    targetTahunan > 0 ? targetTahunan / 12 : 0;
+                    currentCapaian?.target_bulanan !== undefined
+                      ? Number(currentCapaian.target_bulanan)
+                      : (targetTahunan > 0 ? targetTahunan / 12 : 0);
 
                   // Realisasi value
                   const realisasiVal = isInputted
-                    ? currentCapaian.realisasi
+                    ? Number(currentCapaian.realisasi)
                     : 0;
 
                   // Calculate persentase to show status
                   let pct =
-                    targetTahunan > 0
-                      ? (realisasiVal / targetTahunan) * 100
-                      : 0; // Using Target Tahunan as requested, wait. Actually, target_bulanan is usually what we compare against per month, but let's just use what they had or use targetBulanan.
+                    targetBulanan > 0
+                      ? (realisasiVal / targetBulanan) * 100
+                      : 0;
 
                   let statusStr = "Belum Input";
                   let statusColor =
@@ -419,27 +499,27 @@ export default function LaporanRealisasiPage() {
                         <p className="text-xs text-primary-cyan font-semibold mb-1 uppercase tracking-wider">
                           {pilarName}
                         </p>
-                        <h4 className="text-white font-semibold text-sm mb-1 min-h-[40px] line-clamp-2">
-                          {ind.nama_indikator || ind.name}
-                        </h4>
+                        <div className="mb-1 min-h-[48px] flex items-center">
+                          {formatIndicatorName(ind.nama_indikator || ind.name)}
+                        </div>
 
                         <div className="grid grid-cols-2 gap-3 mt-5 mb-5">
-                          <div className="bg-black/20 rounded-xl p-3 border border-white/5">
-                            <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
+                          <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
+                            <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
                               Target Tahunan
                             </p>
-                            <p className="text-white font-mono font-medium">
+                            <p className="text-white font-mono font-medium text-center">
                               {targetTahunan.toLocaleString("id-ID")}{" "}
                               <span className="text-[10px] text-gray-500 font-sans">
                                 {ind.satuan}
                               </span>
                             </p>
                           </div>
-                          <div className="bg-black/20 rounded-xl p-3 border border-white/5">
-                            <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
+                          <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
+                            <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
                               Target Bulanan
                             </p>
-                            <p className="text-gray-200 font-mono font-medium">
+                            <p className="text-gray-200 font-mono font-medium text-center">
                               {targetBulanan.toLocaleString("id-ID", {
                                 maximumFractionDigits: 1,
                               })}{" "}
@@ -452,16 +532,10 @@ export default function LaporanRealisasiPage() {
 
                         <button
                           onClick={() => handleOpenModal(ind)}
-                          className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm
-                            ${
-                              isInputted
-                                ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
-                                : "bg-gradient-to-r from-blue-600 to-indigo-600 border-transparent text-white hover:opacity-90 shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
-                            }
-                          `}
+                          className="w-full py-2.5 rounded-xl border border-transparent text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-90 shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
                         >
                           <Edit3 className="w-4 h-4" />
-                          {isInputted ? "Edit Realisasi" : "Input Realisasi"}
+                          Input Realisasi
                         </button>
                       </div>
                     </div>
@@ -518,39 +592,52 @@ export default function LaporanRealisasiPage() {
                   <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
                     Indikator
                   </p>
-                  <p className="text-sm font-medium text-white">
-                    {selectedIndikator.nama_indikator || selectedIndikator.name}
-                  </p>
+                  <div className="text-sm font-medium text-white">
+                    {formatIndicatorName(selectedIndikator.nama_indikator || selectedIndikator.name)}
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
-                  <div>
-                    <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
+                  <div className="text-center">
+                    <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
                       Satuan
                     </p>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text-white text-center">
                       {selectedIndikator.satuan}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
-                      T. Tahunan
-                    </p>
-                    <p className="text-sm font-medium text-white font-mono">
-                      {Number(
-                        selectedIndikator.target_tahunan || 0,
-                      ).toLocaleString("id-ID")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
-                      T. Bulanan
-                    </p>
-                    <p className="text-sm font-medium text-white font-mono">
-                      {(
-                        Number(selectedIndikator.target_tahunan || 0) / 12
-                      ).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
-                    </p>
-                  </div>
+                  {(() => {
+                    const modalCapaian = selectedIndikator.capaians?.find(
+                      (c: any) => c.bulan === bulan && c.tahun === tahun
+                    );
+                    const targetBulananVal = modalCapaian?.target_bulanan !== undefined
+                      ? Number(modalCapaian.target_bulanan)
+                      : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0);
+
+                    return (
+                      <>
+                        <div className="text-center">
+                          <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
+                            Target Tahunan
+                          </p>
+                          <p className="text-sm font-medium text-white font-mono text-center">
+                            {Number(
+                              selectedIndikator.target_tahunan || 0,
+                            ).toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
+                            Target Bulan Ini
+                          </p>
+                          <p className="text-sm font-medium text-white font-mono text-center">
+                            {targetBulananVal.toLocaleString("id-ID", {
+                              maximumFractionDigits: 1,
+                            })}
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -562,11 +649,18 @@ export default function LaporanRealisasiPage() {
                   </label>
                   <div className="relative">
                     <input
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       value={inputRealisasi}
-                      onChange={(e) => setInputRealisasi(e.target.value)}
-                      placeholder="Masukkan angka realisasi..."
+                      onChange={(e) => setInputRealisasi(formatValue(e.target.value, selectedIndikator.satuan))}
+                      placeholder={(() => {
+                        const s = (selectedIndikator?.satuan || "").toLowerCase();
+                        if (s.includes("orang")) return "Masukkan jumlah orang...";
+                        if (s.includes("persen") || s.includes("%")) return "Masukkan persentase (%)...";
+                        if (s.includes("rupiah") || s.includes("rp")) return "Masukkan nominal rupiah...";
+                        if (s.includes("hektar")) return "Masukkan luas hektar...";
+                        return "Masukkan angka realisasi...";
+                      })()}
                       className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary-cyan focus:ring-1 focus:ring-primary-cyan transition-all font-mono text-lg"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-sans text-sm font-medium">
@@ -666,21 +760,6 @@ export default function LaporanRealisasiPage() {
 
             {/* Modal Footer */}
             <div className="p-5 sm:p-6 pt-4 border-t border-white/10 flex flex-wrap gap-3 shrink-0">
-              {hasExistingData && (
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="px-6 py-3 rounded-xl border border-primary-pink/50 text-primary-pink font-medium hover:bg-primary-pink/10 transition-colors flex items-center justify-center gap-2"
-                >
-                  {isDeleting ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-primary-pink/20 border-t-primary-pink animate-spin"></span>
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                  <span className="hidden sm:inline">Hapus Data</span>
-                </button>
-              )}
-
               <button
                 onClick={() => {
                   setInputRealisasi("");
@@ -702,7 +781,7 @@ export default function LaporanRealisasiPage() {
                 ) : (
                   <>
                     <Save className="w-5 h-5" />
-                    {hasExistingData ? "Update Data" : "Simpan Realisasi"}
+                    {hasExistingData ? "Simpan Data" : "Simpan Realisasi"}
                   </>
                 )}
               </button>
