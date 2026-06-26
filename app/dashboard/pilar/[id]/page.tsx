@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Image as ImageIcon,
   FileText,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { getPilarDetail } from "@/lib/services/api";
@@ -36,6 +37,7 @@ export default function PilarDetail({
   const [pilar, setPilar] = useState<any>(null);
   const [indicators, setIndicators] = useState<any[]>([]);
   const [searchTerm] = useState("");
+  const [lightboxDoc, setLightboxDoc] = useState<{id: string, month: string, url: string} | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Chart States
@@ -201,13 +203,36 @@ export default function PilarDetail({
   }, [selectedIndObj, selectedGraphTahun]);
 
   const selectedMonthDocs = useMemo(() => {
-    return chartData
-      .filter((d) => d.dokumen_url)
-      .map((d, index) => ({
-        id: index,
-        month: d.name,
-        url: d.dokumen_url,
-      }));
+    const docs: { id: string, month: string, url: string }[] = [];
+    chartData.forEach((d, index) => {
+      if (d.dokumen_url) {
+        try {
+          const parsed = JSON.parse(d.dokumen_url);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((url, i) => {
+              docs.push({
+                id: `${index}-${i}`,
+                month: d.name,
+                url: url,
+              });
+            });
+          } else {
+            docs.push({
+              id: `${index}`,
+              month: d.name,
+              url: d.dokumen_url,
+            });
+          }
+        } catch (e) {
+          docs.push({
+            id: `${index}`,
+            month: d.name,
+            url: d.dokumen_url,
+          });
+        }
+      }
+    });
+    return docs;
   }, [chartData]);
 
   if (loading) {
@@ -281,10 +306,20 @@ export default function PilarDetail({
 
       {/* Table Section MASTER DATA */}
       <div className="p-4 sm:p-6 rounded-2xl glassmorphism mt-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-semibold text-white font-poppins">
-            CAPAIAN BULANAN
+            REALISASI BULANAN
           </h2>
+          <div className="flex items-center gap-4 text-xs font-medium bg-black/20 px-4 py-2 rounded-lg border border-white/5">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded border border-blue-500/40 bg-blue-500/20"></div>
+              <span className="text-blue-300">Target</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded border border-emerald-500/40 bg-emerald-500/20"></div>
+              <span className="text-emerald-300">Realisasi</span>
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -348,17 +383,36 @@ export default function PilarDetail({
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((bulan) => {
                     const capList = ind.capaian_kpi || ind.capains || [];
                     const cap = capList.find((c: any) => c.bulan === bulan && c.tahun === parseInt(selectedGraphTahun));
-                    const val = cap ? cap.realisasi : null;
+                    
+                    const targetTahunan = Number(ind.target_tahunan || ind.target || 0);
+                    const targetBulananDefault = targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
+                    
+                    let targetVal = targetBulananDefault;
+                    if (cap && cap.target_bulanan !== undefined && cap.target_bulanan !== null) {
+                      targetVal = Number(cap.target_bulanan);
+                    }
+                    
+                    const realisasiVal = cap ? cap.realisasi : null;
+
                     return (
                       <td
                         key={bulan}
-                        className="px-2 sm:px-3 py-2 sm:py-3 text-center font-mono align-top text-white/80"
+                        className="px-1 sm:px-2 py-2 sm:py-3 text-center align-middle"
                       >
-                        {val !== null
-                          ? Number(val).toLocaleString("id-ID", {
-                              maximumFractionDigits: 1,
-                            })
-                          : "-"}
+                        <div className="flex flex-col gap-1.5 items-center min-w-[55px] max-w-[70px] mx-auto">
+                          <div 
+                            className="w-full bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-1 font-medium transition-all hover:bg-blue-500/20" 
+                            title={`Target Bulan ${bulan}`}
+                          >
+                            {targetVal > 0 ? targetVal.toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "-"}
+                          </div>
+                          <div 
+                            className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-1 font-semibold transition-all hover:bg-emerald-500/20" 
+                            title={`Realisasi Bulan ${bulan}`}
+                          >
+                            {realisasiVal !== null ? Number(realisasiVal).toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "-"}
+                          </div>
+                        </div>
                       </td>
                     );
                   })}
@@ -554,33 +608,45 @@ export default function PilarDetail({
         </div>
 
         {selectedMonthDocs.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedMonthDocs.map((doc) => {
-              const isPdf = doc.url.toLowerCase().endsWith(".pdf");
+              const isPdf = doc.url.toLowerCase().includes(".pdf");
               return (
                 <div
                   key={doc.id}
-                  className="bg-black/30 border border-white/10 rounded-2xl overflow-hidden"
+                  className="bg-[#131B2A]/60 border border-white/5 rounded-2xl overflow-hidden hover:border-white/20 transition-all shadow-xl flex flex-col group relative"
+                  style={{ minHeight: '300px' }}
                 >
-                  <div className="bg-dark-navy px-4 py-3 border-b border-white/5 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary-cyan" />
-                    <h3 className="text-sm font-semibold text-white uppercase">
-                      Realisasi Bulan {doc.month}
-                    </h3>
+                  <div className="bg-dark-navy px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary-cyan" />
+                      <h3 className="text-sm font-semibold text-white uppercase">
+                        Realisasi Bulan {doc.month}
+                      </h3>
+                    </div>
                   </div>
-                  <div className="w-full bg-black/50 flex items-center justify-center p-4">
+                  <div 
+                    className="flex-1 w-full relative bg-black/50 p-4 flex flex-col items-center justify-center cursor-pointer overflow-hidden group-hover:bg-black/40 transition-all" 
+                    onClick={() => setLightboxDoc(doc)}
+                  >
                     {isPdf ? (
-                      <iframe
-                        src={doc.url}
-                        className="w-full h-[600px] rounded-lg border border-white/5 bg-white"
-                        title={`Dokumen ${doc.month}`}
-                      />
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <FileText className="w-16 h-16 text-red-400" />
+                        <span className="text-gray-300 font-medium">Lihat PDF</span>
+                      </div>
                     ) : (
-                      <img
-                        src={doc.url}
-                        alt={`Dokumen ${doc.month}`}
-                        className="w-full max-w-full rounded-lg object-contain max-h-[800px] border border-white/5"
-                      />
+                      <>
+                        <img
+                          src={doc.url}
+                          alt={`Dokumen ${doc.month}`}
+                          className="w-full h-48 object-cover rounded-lg border border-white/10 group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
+                          <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-xl">
+                            View Gambar
+                          </span>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -600,6 +666,30 @@ export default function PilarDetail({
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setLightboxDoc(null)}></div>
+          <div className="relative z-10 max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
+            <button className="absolute -top-12 right-0 p-2 text-white hover:text-red-400 bg-black/50 hover:bg-black/80 rounded-full transition-colors" onClick={() => setLightboxDoc(null)}>
+              <X className="w-6 h-6" />
+            </button>
+            {lightboxDoc.url.toLowerCase().includes(".pdf") ? (
+              <iframe
+                src={lightboxDoc.url}
+                className="w-full h-[80vh] rounded-2xl bg-white shadow-2xl"
+              />
+            ) : (
+              <img
+                src={lightboxDoc.url}
+                alt="Fullscreen"
+                className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
