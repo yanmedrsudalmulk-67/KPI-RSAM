@@ -150,7 +150,7 @@ export default function PilarDetail({
     const targetTahunan = Number(
       selectedIndObj.target_tahunan || selectedIndObj.target || 0,
     );
-    const targetBulanan =
+    const targetBulananDefault =
       targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
 
     const capList = selectedIndObj.capaian_kpi || selectedIndObj.capaians || [];
@@ -176,10 +176,23 @@ export default function PilarDetail({
         (c: any) => c.bulan === i && c.tahun === parseInt(selectedGraphTahun),
       );
 
+      const targetBulananValue = (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null)
+        ? Number(capaian.target_bulanan)
+        : targetBulananDefault;
+
+      const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
+
+      let realisasiPercentage = 0;
+      if (targetBulananValue > 0) {
+        realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+      }
+
+      const targetPercentage = targetBulananValue > 0 ? 100 : 0;
+
       data.push({
         name: months[i - 1],
-        Target: targetBulanan,
-        Realisasi: capaian ? Number(capaian.realisasi) : 0,
+        Target: targetPercentage,
+        Realisasi: realisasiPercentage,
         dokumen_url: capaian ? capaian.dokumen_url : null,
       });
     }
@@ -278,12 +291,14 @@ export default function PilarDetail({
           <table className="w-full text-left text-[11px] sm:text-xs text-gray-300">
             <thead className="bg-dark-navy/50 text-gray-400 uppercase font-medium whitespace-nowrap">
               <tr>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 rounded-tl-lg">No</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 min-w-[150px]">
+                <th className="px-2 sm:px-3 py-2 sm:py-3 rounded-tl-lg text-center">No</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 min-w-[150px] text-center">
                   Nama Indikator
                 </th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3">Sat</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-right">Target</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-center">Satuan</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-center leading-tight">
+                  Target<br />Tahunan
+                </th>
                 {[
                   "Jan",
                   "Feb",
@@ -300,7 +315,7 @@ export default function PilarDetail({
                 ].map((bln, i) => (
                   <th
                     key={bln}
-                    className={`px-2 sm:px-3 py-2 sm:py-3 text-right ${i === 11 ? "rounded-tr-lg" : ""}`}
+                    className={`px-2 sm:px-3 py-2 sm:py-3 text-center ${i === 11 ? "rounded-tr-lg" : ""}`}
                   >
                     {bln}
                   </th>
@@ -309,17 +324,25 @@ export default function PilarDetail({
             </thead>
             <tbody className="divide-y divide-white/5">
               {filteredIndicators.map((ind, idx) => (
-                <tr key={ind.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top">
+                <tr
+                  key={ind.id}
+                  onClick={() => setSelectedGraphIndikator(ind.id.toString())}
+                  className={`cursor-pointer transition-colors ${
+                    selectedGraphIndikator === ind.id.toString()
+                      ? "bg-primary-purple/10 border-l-2 border-primary-purple"
+                      : "hover:bg-white/5"
+                  }`}
+                >
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top text-center">
                     {idx + 1}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 font-medium text-white max-w-[200px] leading-tight">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 font-medium text-white max-w-[200px] leading-tight text-left text-[12px]">
                     {ind.nama_indikator}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top whitespace-nowrap">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top whitespace-nowrap text-center">
                     {ind.satuan || "-"}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-right font-mono font-medium text-primary-cyan align-top whitespace-nowrap">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-medium text-primary-cyan align-top whitespace-nowrap">
                     {Number(ind.target_tahunan || 0).toLocaleString("id-ID")}
                   </td>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((bulan) => {
@@ -329,7 +352,7 @@ export default function PilarDetail({
                     return (
                       <td
                         key={bulan}
-                        className="px-2 sm:px-3 py-2 sm:py-3 text-right font-mono align-top text-white/80"
+                        className="px-2 sm:px-3 py-2 sm:py-3 text-center font-mono align-top text-white/80"
                       >
                         {val !== null
                           ? Number(val).toLocaleString("id-ID", {
@@ -366,18 +389,6 @@ export default function PilarDetail({
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={selectedGraphIndikator}
-              onChange={(e) => setSelectedGraphIndikator(e.target.value)}
-              className="px-4 py-2 bg-dark-navy border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-cyan text-sm max-w-[200px] truncate"
-            >
-              {indicators.map((ind) => (
-                <option key={ind.id} value={ind.id.toString()}>
-                  {ind.nama_indikator}
-                </option>
-              ))}
-            </select>
-
             <select
               value={selectedGraphTahun}
               onChange={(e) => setSelectedGraphTahun(e.target.value)}
@@ -430,6 +441,7 @@ export default function PilarDetail({
                   <YAxis
                     stroke="#ffffff50"
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tickFormatter={(val) => `${val}%`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -438,6 +450,7 @@ export default function PilarDetail({
                       borderRadius: "12px",
                     }}
                     itemStyle={{ fontWeight: "bold" }}
+                    formatter={(value: any, name: any) => [`${value}%`, name]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar
@@ -458,7 +471,7 @@ export default function PilarDetail({
                       fill="#ffffff"
                       fontSize={11}
                       formatter={(val: number) =>
-                        val > 0 ? val.toLocaleString("id-ID") : ""
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
                       }
                     />
                   </Bar>
@@ -481,6 +494,7 @@ export default function PilarDetail({
                   <YAxis
                     stroke="#ffffff50"
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tickFormatter={(val) => `${val}%`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -489,6 +503,7 @@ export default function PilarDetail({
                       borderRadius: "12px",
                     }}
                     itemStyle={{ fontWeight: "bold" }}
+                    formatter={(value: any, name: any) => [`${value}%`, name]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Line
@@ -514,7 +529,7 @@ export default function PilarDetail({
                       fontSize={11}
                       offset={10}
                       formatter={(val: number) =>
-                        val > 0 ? val.toLocaleString("id-ID") : ""
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
                       }
                     />
                   </Line>
@@ -534,12 +549,8 @@ export default function PilarDetail({
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-white font-poppins flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-primary-pink" />
-            VISUALISASI DOKUMEN REALISASI
+            BUKTI DOKUMEN REALISASI
           </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Dokumen pendukung yang diunggah pada menu Realisasi untuk indikator
-            terpilih.
-          </p>
         </div>
 
         {selectedMonthDocs.length > 0 ? (
