@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { chartData, pilarKpi } from "@/lib/data";
+import { pilarKpi } from "@/lib/data";
 import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCircle, Copy, Check, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend, LabelList } from "recharts";
-import { getDashboardSummary, PilarKPI, getMonthlyProgressData } from "@/lib/services/api";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend, LabelList, Cell } from "recharts";
+import { getDashboardSummary, PilarKPI } from "@/lib/services/api";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -13,6 +13,21 @@ import "swiper/css/effect-coverflow";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 import { EffectCoverflow, Pagination, Navigation, Autoplay } from "swiper/modules";
+
+const renderCustomDot = (props: any) => {
+  const { cx, cy, payload } = props;
+  return (
+    <circle 
+      cx={cx} 
+      cy={cy} 
+      r={5} 
+      fill={payload.color || '#06B6D4'} 
+      stroke="#0f172a" 
+      strokeWidth={2} 
+      style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} 
+    />
+  );
+};
 
 export default function DashboardPage() {
   const [pilars, setPilars] = useState<any[]>([]);
@@ -23,29 +38,6 @@ export default function DashboardPage() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
-  const [selectedPilarChart, setSelectedPilarChart] = useState<string>('Semua Pilar');
-  const [monthlyChartData, setMonthlyChartData] = useState<any[]>([]);
-
-  useEffect(() => {
-    async function loadMonthlyData() {
-      if (!isSupabaseConfigured()) {
-        const dummyData = Array.from({ length: 12 }).map((_, i) => ({
-          name: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'][i],
-          target: Number(((i + 1) * (100 / 12)).toFixed(1)),
-          realisasi: Math.floor(Math.random() * 50) + 10,
-        }));
-        setMonthlyChartData(dummyData);
-        return;
-      }
-      try {
-        const monthly = await getMonthlyProgressData(tahun, selectedPilarChart);
-        setMonthlyChartData(monthly);
-      } catch (error) {
-        console.error("Error loading monthly data:", error);
-      }
-    }
-    loadMonthlyData();
-  }, [tahun, selectedPilarChart]);
 
   useEffect(() => {
     async function loadData() {
@@ -67,9 +59,12 @@ export default function DashboardPage() {
       }
 
       if (!isSupabaseConfigured()) {
-        setPilars(pilarKpi.map(p => ({
+        setPilars(pilarKpi.map((p, i) => ({
           ...p,
           nama_pilar: p.name,
+          progress: Math.floor(Math.random() * 50) + 50,
+          status: 'Belum tercapai',
+          count: 5
         })));
         setLoading(false);
         return;
@@ -83,6 +78,9 @@ export default function DashboardPage() {
           setPilars(pilarKpi.map(p => ({
             ...p,
             nama_pilar: p.name,
+            progress: 0,
+            status: 'Belum tercapai',
+            count: 0
           })));
         }
       } catch (error: any) {
@@ -92,6 +90,9 @@ export default function DashboardPage() {
         setPilars(pilarKpi.map(p => ({
           ...p,
           nama_pilar: p.name,
+          progress: 0,
+          status: 'Belum tercapai',
+          count: 0
         })));
       } finally {
         setLoading(false);
@@ -100,10 +101,39 @@ export default function DashboardPage() {
     loadData();
   }, [tahun, bulan]);
 
-  const MONTHS = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  const MONTH_OPTIONS = [
+    { value: 0, label: "Tahunan" },
+    { value: 1, label: "Januari" },
+    { value: 2, label: "Februari" },
+    { value: 3, label: "Maret" },
+    { value: 4, label: "April" },
+    { value: 5, label: "Mei" },
+    { value: 6, label: "Juni" },
+    { value: 7, label: "Juli" },
+    { value: 8, label: "Agustus" },
+    { value: 9, label: "September" },
+    { value: 10, label: "Oktober" },
+    { value: 11, label: "November" },
+    { value: 12, label: "Desember" }
   ];
+
+  const chartData = pilars.map(p => {
+    let barColor = "#06B6D4"; // default cyan
+    if (p.nama_pilar.includes("PILAR 1")) barColor = "#3b82f6";
+    else if (p.nama_pilar.includes("PILAR 2")) barColor = "#22c55e";
+    else if (p.nama_pilar.includes("PILAR 3")) barColor = "#f59e0b";
+    else if (p.nama_pilar.includes("PILAR 4")) barColor = "#a855f7";
+    else if (p.nama_pilar.includes("PILAR 5")) barColor = "#ef4444";
+    else if (p.nama_pilar.includes("PILAR 6")) barColor = "#2dd4bf";
+    else if (p.nama_pilar.includes("PILAR 7")) barColor = "#818cf8";
+
+    return {
+      name: `Pilar ${p.id}`,
+      progress: p.progress || 0,
+      target: 100,
+      color: barColor
+    };
+  });
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -131,9 +161,9 @@ export default function DashboardPage() {
                 onChange={(e) => setBulan(parseInt(e.target.value))}
                 className="bg-transparent text-white pr-6 appearance-none focus:outline-none cursor-pointer font-semibold text-sm tracking-wide"
               >
-                {MONTHS.map((m, idx) => (
-                  <option key={m} value={idx + 1} className="bg-[#0f172a] text-white">
-                    {m.substring(0, 3)}
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value} className="bg-[#0f172a] text-white">
+                    {m.value === 0 ? m.label : m.label.substring(0, 3)}
                   </option>
                 ))}
               </select>
@@ -286,33 +316,13 @@ export default function DashboardPage() {
       <div className="mt-12">
         <h2 className="text-xl font-bold text-white mb-6 font-poppins flex items-center gap-2">
           <Activity className="w-5 h-5 text-primary-cyan" /> 
-          GRAFIK CAPAIAN KPI
+          GRAFIK CAPAIAN KPI PER PILAR
         </h2>
         
         <div className="p-6 rounded-2xl glassmorphism">
-          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-gray-200 text-lg">Tren Capaian Bulanan KPI</h3>
-              <p className="text-sm text-gray-400 mt-1">Capaian persentase setiap bulan untuk tahun {tahun}</p>
-            </div>
-            
+          <div className="mb-8 flex flex-col sm:flex-row items-center justify-end gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <select 
-                value={selectedPilarChart}
-                onChange={(e) => setSelectedPilarChart(e.target.value)}
-                className="bg-[#0f172a] text-white border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-cyan text-sm w-full sm:w-auto"
-              >
-                <option value="Semua Pilar">Semua Pilar</option>
-                <option value="PILAR 1">PILAR 1</option>
-                <option value="PILAR 2">PILAR 2</option>
-                <option value="PILAR 3">PILAR 3</option>
-                <option value="PILAR 4">PILAR 4</option>
-                <option value="PILAR 5">PILAR 5</option>
-                <option value="PILAR 6">PILAR 6</option>
-                <option value="PILAR 7">PILAR 7</option>
-              </select>
-
-              <div className="flex bg-[#0f172a] rounded-lg p-1 border border-white/10 w-full sm:w-auto">
+              <div className="flex bg-[#0f172a] rounded-lg p-1 border border-white/10 w-full sm:w-auto shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 <button
                   onClick={() => setChartType('bar')}
                   className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${chartType === 'bar' ? 'bg-primary-cyan/20 text-primary-cyan' : 'text-gray-400 hover:text-white'}`}
@@ -332,71 +342,44 @@ export default function DashboardPage() {
           <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
-                <BarChart data={monthlyChartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     cursor={{fill: '#1E293B', opacity: 0.4}}
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                     formatter={(value: number) => [`${value}%`, '']}
                   />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
                   
-                  {selectedPilarChart === 'Semua Pilar' ? (
-                    <>
-                      <Bar dataKey="target" name="Target (100%)" fill="#334155" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_1" name="Pilar 1" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_2" name="Pilar 2" fill="#f97316" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_3" name="Pilar 3" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_4" name="Pilar 4" fill="#84cc16" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_5" name="Pilar 5" fill="#10b981" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_6" name="Pilar 6" fill="#06b6d4" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="realisasi_PILAR_7" name="Pilar 7" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                    </>
-                  ) : (
-                    <>
-                      <Bar dataKey="target" name="Target" fill="#334155" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} />
-                      </Bar>
-                      <Bar dataKey="realisasi" name="Realisasi" fill="#06B6D4" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="realisasi" position="top" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} />
-                      </Bar>
-                    </>
-                  )}
+                  <Bar dataKey="target" name="Target (100%)" fill="#334155" radius={[4, 4, 0, 0]}>
+                    <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} />
+                  </Bar>
+                  <Bar dataKey="progress" name="Capaian" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} style={{ filter: 'drop-shadow(0px 6px 8px rgba(0,0,0,0.4))' }} />
+                    ))}
+                    <LabelList dataKey="progress" position="top" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} />
+                  </Bar>
                 </BarChart>
               ) : (
-                <LineChart data={monthlyChartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                     formatter={(value: number) => [`${value}%`, '']}
                   />
                   <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
                   
-                  {selectedPilarChart === 'Semua Pilar' ? (
-                    <>
-                      <Line type="monotone" dataKey="target" name="Target (100%)" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_1" name="Pilar 1" stroke="#ef4444" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_2" name="Pilar 2" stroke="#f97316" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_3" name="Pilar 3" stroke="#f59e0b" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_4" name="Pilar 4" stroke="#84cc16" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_5" name="Pilar 5" stroke="#10b981" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_6" name="Pilar 6" stroke="#06b6d4" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                      <Line type="monotone" dataKey="realisasi_PILAR_7" name="Pilar 7" stroke="#8b5cf6" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
-                    </>
-                  ) : (
-                    <>
-                      <Line type="monotone" dataKey="target" name="Target" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={{r: 4, fill: '#0f172a', strokeWidth: 2}}>
-                        <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
-                      </Line>
-                      <Line type="monotone" dataKey="realisasi" name="Realisasi" stroke="#06B6D4" strokeWidth={3} dot={{r: 5, fill: '#0f172a', strokeWidth: 2}} activeDot={{r: 7}}>
-                        <LabelList dataKey="realisasi" position="bottom" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
-                      </Line>
-                    </>
-                  )}
+                  <Line type="monotone" dataKey="target" name="Target (100%)" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={{r: 4, fill: '#0f172a', strokeWidth: 2}}>
+                    <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
+                  </Line>
+                  <Line type="monotone" dataKey="progress" name="Capaian" stroke="#06B6D4" strokeWidth={3} dot={renderCustomDot} activeDot={{r: 7, fill: '#06B6D4', strokeWidth: 0}} style={{ filter: 'drop-shadow(0px 8px 12px rgba(6,182,212,0.4))' }}>
+                    <LabelList dataKey="progress" position="bottom" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
+                  </Line>
                 </LineChart>
               )}
             </ResponsiveContainer>
