@@ -801,7 +801,7 @@ export default function PilarDetail({
             <p className="text-sm text-gray-400 mt-1">Akses cepat ke platform media sosial resmi Rumah Sakit.</p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-5">
+          <div className="flex flex-wrap items-center justify-start gap-4 md:gap-5">
             {/* Facebook */}
             <motion.a 
               href={socialLinks.facebook || "#"} 
@@ -809,14 +809,14 @@ export default function PilarDetail({
               rel="noopener noreferrer"
               whileHover={socialLinks.facebook ? { scale: 1.08, y: -4 } : {}}
               whileTap={socialLinks.facebook ? { scale: 0.95 } : {}}
-              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[14px] md:rounded-[18px] transition-all duration-300 ${
                 socialLinks.facebook 
-                  ? 'bg-gradient-to-br from-[#1877F2] to-[#0D5BD7] shadow-[0_10px_20px_rgba(24,119,242,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(24,119,242,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  ? 'bg-gradient-to-br from-[#2F80ED] to-[#0056C6] shadow-[0_12px_24px_rgba(24,119,242,0.4),inset_0_2.5px_4px_rgba(255,255,255,0.45),inset_0_-2.5px_4px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_32px_rgba(24,119,242,0.6),inset_0_2.5px_4px_rgba(255,255,255,0.55),inset_0_-2.5px_4px_rgba(0,0,0,0.35)] cursor-pointer' 
                   : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
               }`}
               title={socialLinks.facebook ? "Facebook Resmi" : "Link belum dikonfigurasi"}
             >
-              <Facebook className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={1.5} fill="currentColor" />
+              <Facebook className="w-8 h-8 md:w-9 md:h-9 text-white drop-shadow-md" strokeWidth={1.5} fill="currentColor" />
             </motion.a>
 
             {/* Instagram */}
@@ -826,14 +826,14 @@ export default function PilarDetail({
               rel="noopener noreferrer"
               whileHover={socialLinks.instagram ? { scale: 1.08, y: -4 } : {}}
               whileTap={socialLinks.instagram ? { scale: 0.95 } : {}}
-              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[14px] md:rounded-[18px] transition-all duration-300 ${
                 socialLinks.instagram 
-                  ? 'bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#515BD4] shadow-[0_10px_20px_rgba(221,42,123,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(221,42,123,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  ? 'bg-gradient-to-tr from-[#FF6B35] via-[#E1306C] to-[#833AB4] shadow-[0_12px_24px_rgba(225,48,108,0.4),inset_0_2.5px_4px_rgba(255,255,255,0.45),inset_0_-2.5px_4px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_32px_rgba(225,48,108,0.6),inset_0_2.5px_4px_rgba(255,255,255,0.55),inset_0_-2.5px_4px_rgba(0,0,0,0.35)] cursor-pointer' 
                   : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
               }`}
               title={socialLinks.instagram ? "Instagram Resmi" : "Link belum dikonfigurasi"}
             >
-              <Instagram className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={2} />
+              <Instagram className="w-8 h-8 md:w-9 md:h-9 text-white drop-shadow-md" strokeWidth={2} />
             </motion.a>
 
             {/* Website */}
@@ -843,14 +843,14 @@ export default function PilarDetail({
               rel="noopener noreferrer"
               whileHover={socialLinks.website ? { scale: 1.08, y: -4 } : {}}
               whileTap={socialLinks.website ? { scale: 0.95 } : {}}
-              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[14px] md:rounded-[18px] transition-all duration-300 ${
                 socialLinks.website 
-                  ? 'bg-gradient-to-br from-[#10B981] to-[#06B6D4] shadow-[0_10px_20px_rgba(16,185,129,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(16,185,129,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  ? 'bg-gradient-to-br from-[#05D386] to-[#00C9E0] shadow-[0_12px_24px_rgba(6,182,212,0.4),inset_0_2.5px_4px_rgba(255,255,255,0.45),inset_0_-2.5px_4px_rgba(0,0,0,0.25)] hover:shadow-[0_16px_32px_rgba(6,182,212,0.6),inset_0_2.5px_4px_rgba(255,255,255,0.55),inset_0_-2.5px_4px_rgba(0,0,0,0.35)] cursor-pointer' 
                   : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
               }`}
               title={socialLinks.website ? "Website Resmi" : "Link belum dikonfigurasi"}
             >
-              <Globe className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={2} />
+              <Globe className="w-8 h-8 md:w-9 md:h-9 text-white drop-shadow-md" strokeWidth={2} />
             </motion.a>
 
             {/* TikTok */}
@@ -860,18 +860,18 @@ export default function PilarDetail({
               rel="noopener noreferrer"
               whileHover={socialLinks.tiktok ? { scale: 1.08, y: -4 } : {}}
               whileTap={socialLinks.tiktok ? { scale: 0.95 } : {}}
-              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[14px] md:rounded-[18px] transition-all duration-300 ${
                 socialLinks.tiktok 
-                  ? 'bg-gradient-to-br from-[#111111] to-[#000000] shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_0_2px_4px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.4)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.7),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.5)] cursor-pointer' 
+                  ? 'bg-gradient-to-br from-[#1E1E1E] to-[#050505] shadow-[0_12px_24px_rgba(0,0,0,0.6),inset_0_2.5px_4px_rgba(255,255,255,0.25),inset_0_-2.5px_4px_rgba(0,0,0,0.45)] hover:shadow-[0_16px_32px_rgba(0,0,0,0.8),inset_0_2.5px_4px_rgba(255,255,255,0.35),inset_0_-2.5px_4px_rgba(0,0,0,0.55)] cursor-pointer' 
                   : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
               }`}
               title={socialLinks.tiktok ? "TikTok Resmi" : "Link belum dikonfigurasi"}
             >
               <svg 
                 viewBox="0 0 448 512" 
-                className="w-6 h-6 md:w-7 md:h-7" 
+                className="w-7 h-7 md:w-8 md:h-8" 
                 fill="#FFFFFF"
-                style={{ filter: "drop-shadow(2px 2px 0px #ff0050) drop-shadow(-2px -2px 0px #00f2fe)" }}
+                style={{ filter: "drop-shadow(3px 3px 0px #ff0050) drop-shadow(-3px -3px 0px #00f2fe)" }}
               >
                 <path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25V349.38A162.55 162.55 0 1 1 185 188.31V278.2a74.62 74.62 0 1 0 52.23 71.18V0l88 0a121.18 121.18 0 0 0 1.86 22.17h0A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/>
               </svg>
