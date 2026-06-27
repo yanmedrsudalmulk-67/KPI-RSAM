@@ -35,6 +35,13 @@ export default function PengaturanPage() {
   const [menuBgType, setMenuBgType] = useState<"default" | "image" | "video">("default");
   const [menuBgVal, setMenuBgVal] = useState<string>("");
 
+  // Social Media State
+  const [socialFacebook, setSocialFacebook] = useState<string>("");
+  const [socialInstagram, setSocialInstagram] = useState<string>("");
+  const [socialTiktok, setSocialTiktok] = useState<string>("");
+  const [socialWebsite, setSocialWebsite] = useState<string>("");
+  const [isSavingSocial, setIsSavingSocial] = useState(false);
+
   const [welcomeFile, setWelcomeFile] = useState<File | null>(null);
   const [menuFile, setMenuFile] = useState<File | null>(null);
   
@@ -105,6 +112,12 @@ export default function PengaturanPage() {
                 setMenuBgVal(parsed.menu_bg_val);
                 if (parsed.menu_bg_type === "video") setMenuVideoInput(parsed.menu_bg_val);
               }
+              if (parsed.social_media) {
+                setSocialFacebook(parsed.social_media.facebook || "");
+                setSocialInstagram(parsed.social_media.instagram || "");
+                setSocialTiktok(parsed.social_media.tiktok || "");
+                setSocialWebsite(parsed.social_media.website || "");
+              }
             } catch (jsonErr) {
               setLogoUrl(rawUrl);
             }
@@ -134,6 +147,12 @@ export default function PengaturanPage() {
             if (parsed.menu_bg_val !== undefined && parsed.menu_bg_val !== null) {
               setMenuBgVal(parsed.menu_bg_val);
               if (parsed.menu_bg_type === "video") setMenuVideoInput(parsed.menu_bg_val);
+            }
+            if (parsed.social_media) {
+              setSocialFacebook(parsed.social_media.facebook || "");
+              setSocialInstagram(parsed.social_media.instagram || "");
+              setSocialTiktok(parsed.social_media.tiktok || "");
+              setSocialWebsite(parsed.social_media.website || "");
             }
           } catch (jsonErr) {
             // ignore, treated as normal URL
@@ -414,6 +433,54 @@ export default function PengaturanPage() {
   const handleRemoveSliderImage = async (indexToRemove: number) => {
     const updatedImages = sliderImages.filter((_, idx) => idx !== indexToRemove);
     await handleSaveSliderImages(updatedImages);
+  };
+
+  const handleSaveSocialMedia = async () => {
+    if (!supabase) return;
+    setIsSavingSocial(true);
+    setStatusMessage(null);
+
+    try {
+      let nextLogoValue: string = "";
+      const { data: currentSettings } = await supabase
+        .from("settings")
+        .select("logo_url")
+        .eq("id", 1)
+        .maybeSingle();
+
+      let jsonPayload: any = {};
+      if (currentSettings && currentSettings.logo_url && currentSettings.logo_url.startsWith('{')) {
+        try {
+          jsonPayload = JSON.parse(currentSettings.logo_url);
+        } catch (e) {}
+      } else if (currentSettings) {
+        jsonPayload.logo_url = currentSettings.logo_url;
+      }
+
+      jsonPayload.social_media = {
+        facebook: socialFacebook,
+        instagram: socialInstagram,
+        tiktok: socialTiktok,
+        website: socialWebsite
+      };
+
+      nextLogoValue = JSON.stringify(jsonPayload);
+
+      const { error: dbError } = await supabase
+        .from("settings")
+        .upsert({ id: 1, logo_url: nextLogoValue }, { onConflict: "id" });
+
+      if (dbError) throw new Error(dbError.message);
+
+      setStatusMessage({ type: "success", text: "Pengaturan Media Sosial berhasil disimpan!" });
+    } catch (error: any) {
+      setStatusMessage({
+        type: "error",
+        text: `Gagal menyimpan media sosial: ${error.message}`
+      });
+    } finally {
+      setIsSavingSocial(false);
+    }
   };
 
   // Safe background saver
@@ -1011,6 +1078,75 @@ export default function PengaturanPage() {
                   />
                 </label>
               </div>
+            </div>
+          </div>
+
+          {/* Pengaturan Media Sosial */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center">
+                <LinkIcon className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">Pengaturan Media Sosial</h2>
+                <p className="text-sm text-gray-400">
+                  Konfigurasi URL untuk publikasi kegiatan dan promosi RS. (Pastikan URL menggunakan https://)
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-1">Facebook URL</label>
+                <input
+                  type="url"
+                  placeholder="https://facebook.com/rsalmulk"
+                  value={socialFacebook}
+                  onChange={(e) => setSocialFacebook(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-1">Instagram URL</label>
+                <input
+                  type="url"
+                  placeholder="https://instagram.com/rsalmulk"
+                  value={socialInstagram}
+                  onChange={(e) => setSocialInstagram(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-1">TikTok URL</label>
+                <input
+                  type="url"
+                  placeholder="https://tiktok.com/@rsalmulk"
+                  value={socialTiktok}
+                  onChange={(e) => setSocialTiktok(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-300 block mb-1">Website Resmi URL</label>
+                <input
+                  type="url"
+                  placeholder="https://www.rsalmulk.co.id"
+                  value={socialWebsite}
+                  onChange={(e) => setSocialWebsite(e.target.value)}
+                  className="w-full px-4 py-2 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 transition-all placeholder:text-gray-600"
+                />
+              </div>
+
+              <button
+                onClick={handleSaveSocialMedia}
+                disabled={isSavingSocial}
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-sm font-medium transition-transform active:scale-[0.98] disabled:opacity-50"
+              >
+                {isSavingSocial ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Simpan Media Sosial
+              </button>
             </div>
           </div>
 

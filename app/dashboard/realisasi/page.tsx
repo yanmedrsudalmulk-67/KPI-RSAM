@@ -15,6 +15,10 @@ import {
   Activity,
   Upload,
   FileText,
+  Users,
+  Coins,
+  Lightbulb,
+  Briefcase
 } from "lucide-react";
 import {
   getIndicatorsWithCapaianByYear,
@@ -346,9 +350,6 @@ export default function LaporanRealisasiPage() {
         <h2 className="text-lg md:text-xl font-bold text-white mt-2 relative z-10">
           UOBK RSUD AL-MULK KOTA SUKABUMI
         </h2>
-        <h3 className="text-sm md:text-base font-medium text-gray-400 mt-2 relative z-10">
-          Input capaian KPI berdasarkan periode bulanan
-        </h3>
       </div>
 
       {/* FILTER SECTION */}
@@ -494,6 +495,15 @@ export default function LaporanRealisasiPage() {
                     }
                   }
 
+                  let PilarIcon = Activity;
+                  const nameLower = pilarName.toLowerCase();
+                  if (nameLower.includes("ketenagakerjaan") || nameLower.includes("pilar 1")) PilarIcon = Users;
+                  else if (nameLower.includes("bpk ri") || nameLower.includes("pilar 2")) PilarIcon = FileText;
+                  else if (nameLower.includes("aset") || nameLower.includes("pilar 3")) PilarIcon = Briefcase;
+                  else if (nameLower.includes("anggaran") || nameLower.includes("pad") || nameLower.includes("pilar 4") || nameLower.includes("pilar 7")) PilarIcon = Coins;
+                  else if (nameLower.includes("inovasi") || nameLower.includes("pilar 5")) PilarIcon = Lightbulb;
+                  else if (nameLower.includes("iku") || nameLower.includes("unggulan") || nameLower.includes("pilar 6")) PilarIcon = Target;
+
                   return (
                     <div
                       key={ind.id}
@@ -505,7 +515,7 @@ export default function LaporanRealisasiPage() {
                       <div className="p-5">
                         <div className="flex justify-between items-start mb-4">
                           <div className="bg-black/30 p-2 rounded-lg border border-white/5">
-                            <Activity className="w-5 h-5 text-blue-400" />
+                            <PilarIcon className="w-5 h-5 text-blue-400" />
                           </div>
                           <span
                             className={`px-3 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase border ${statusColor} backdrop-blur-sm`}
@@ -513,10 +523,6 @@ export default function LaporanRealisasiPage() {
                             {statusStr}
                           </span>
                         </div>
-
-                        <p className="text-xs text-primary-cyan font-semibold mb-1 uppercase tracking-wider">
-                          {pilarName}
-                        </p>
                         <div className="mb-1 min-h-[48px] flex items-center">
                           {formatIndicatorName(ind.nama_indikator || ind.name)}
                         </div>
@@ -533,7 +539,7 @@ export default function LaporanRealisasiPage() {
                           </div>
                           <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
                             <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold text-center">
-                              Target Bulanan
+                              Target Bulan Ini
                             </p>
                             <p className="text-gray-200 font-mono font-medium text-center">
                               {targetBulanan.toLocaleString("id-ID", {

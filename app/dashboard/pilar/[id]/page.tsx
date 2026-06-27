@@ -9,10 +9,14 @@ import {
   Image as ImageIcon,
   FileText,
   X,
+  Facebook,
+  Instagram,
+  Globe,
+  Share2
 } from "lucide-react";
 import Link from "next/link";
 import { getPilarDetail } from "@/lib/services/api";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
   BarChart,
   Bar,
@@ -74,6 +78,11 @@ export default function PilarDetail({
   const [selectedGraphBulan, setSelectedGraphBulan] = useState<number>(
     new Date().getMonth() + 1,
   );
+  
+  // Social Links
+  const [socialLinks, setSocialLinks] = useState<{facebook: string, instagram: string, tiktok: string, website: string}>({
+    facebook: "", instagram: "", tiktok: "", website: ""
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -97,6 +106,32 @@ export default function PilarDetail({
 
   useEffect(() => {
     async function load() {
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const { data: currentSettings } = await supabase
+            .from("settings")
+            .select("logo_url")
+            .eq("id", 1)
+            .maybeSingle();
+
+          if (currentSettings && currentSettings.logo_url && currentSettings.logo_url.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(currentSettings.logo_url);
+              if (parsed.social_media) {
+                setSocialLinks({
+                  facebook: parsed.social_media.facebook || "",
+                  instagram: parsed.social_media.instagram || "",
+                  tiktok: parsed.social_media.tiktok || "",
+                  website: parsed.social_media.website || ""
+                });
+              }
+            } catch (e) {}
+          }
+        } catch (e) {
+          console.error("Error fetching social media:", e);
+        }
+      }
+
       let isMock = !isSupabaseConfigured();
       if (isSupabaseConfigured()) {
         try {
@@ -729,6 +764,75 @@ export default function PilarDetail({
           </div>
         )}
       </div>
+
+      {/* MEDIA PUBLIKASI */}
+      {selectedIndObj?.nama_indikator?.toLowerCase().includes("expose media sosial") && (
+        <div className="p-6 rounded-2xl glassmorphism mt-8 animate-in fade-in zoom-in-95 duration-500">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-white font-poppins flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-emerald-400" />
+              MEDIA PUBLIKASI
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">Akses cepat ke platform media sosial resmi Rumah Sakit.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-6">
+            <svg width="0" height="0" className="absolute">
+              <linearGradient id="ig-gradient" x1="100%" y1="100%" x2="0%" y2="0%">
+                <stop stopColor="#f09433" offset="0%" />
+                <stop stopColor="#dc2743" offset="50%" />
+                <stop stopColor="#bc1888" offset="100%" />
+              </linearGradient>
+            </svg>
+
+            {/* Facebook */}
+            <a 
+              href={socialLinks.facebook || "#"} 
+              target={socialLinks.facebook ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.facebook ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-[#1877F2]/10 hover:border-[#1877F2]/50 hover:shadow-[0_10px_30px_rgba(24,119,242,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
+              title={socialLinks.facebook ? "Facebook Resmi" : "Belum dikonfigurasi"}
+            >
+              <Facebook className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" fill="#1877F2" stroke="#1877F2" />
+            </a>
+
+            {/* Instagram */}
+            <a 
+              href={socialLinks.instagram || "#"} 
+              target={socialLinks.instagram ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.instagram ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-pink-600/10 hover:border-[#dc2743]/50 hover:shadow-[0_10px_30px_rgba(220,39,67,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
+              title={socialLinks.instagram ? "Instagram Resmi" : "Belum dikonfigurasi"}
+            >
+              <Instagram className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" stroke="url(#ig-gradient)" strokeWidth={2} />
+            </a>
+
+            {/* TikTok */}
+            <a 
+              href={socialLinks.tiktok || "#"} 
+              target={socialLinks.tiktok ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.tiktok ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-white/10 hover:border-white/30 hover:shadow-[0_10px_30px_rgba(255,255,255,0.25)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
+              title={socialLinks.tiktok ? "TikTok Resmi" : "Belum dikonfigurasi"}
+            >
+              <svg viewBox="0 0 448 512" className="w-12 h-12 transition-transform duration-300 group-hover:scale-105" fill="#FFFFFF">
+                <path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25V349.38A162.55 162.55 0 1 1 185 188.31V278.2a74.62 74.62 0 1 0 52.23 71.18V0l88 0a121.18 121.18 0 0 0 1.86 22.17h0A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/>
+              </svg>
+            </a>
+
+            {/* Website */}
+            <a 
+              href={socialLinks.website || "#"} 
+              target={socialLinks.website ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.website ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-[#10b981]/10 hover:border-[#10b981]/50 hover:shadow-[0_10px_30px_rgba(16,185,129,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
+              title={socialLinks.website ? "Website Resmi" : "Belum dikonfigurasi"}
+            >
+              <Globe className="w-14 h-14 text-[#10B981] transition-transform duration-300 group-hover:scale-105" strokeWidth={1.5} />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox Modal */}
       {lightboxDoc && (
