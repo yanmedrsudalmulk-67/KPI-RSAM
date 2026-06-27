@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from "react";
+import { use, useState, useEffect, useMemo, useRef } from "react";
 import { pilarKpi, indicators as indKpi } from "@/lib/data";
 import {
   ArrowLeft,
@@ -27,6 +27,29 @@ import {
   LabelList,
 } from "recharts";
 
+const formatIndicatorName = (name: string) => {
+  if (!name) return null;
+  if (name.includes("Jumlah aset yang dimanfaatkan - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-[10px] sm:text-[11px] font-medium">Jumlah aset yang dimanfaatkan :</span>
+        <span className="text-white font-semibold text-[12px] sm:text-xs leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  if (name.includes("Cross selling - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-[10px] sm:text-[11px] font-medium">Cross selling :</span>
+        <span className="text-white font-semibold text-[12px] sm:text-xs leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  return <span className="text-white font-semibold text-[12px] sm:text-xs leading-normal">{name}</span>;
+};
+
 export default function PilarDetail({
   params,
 }: {
@@ -39,6 +62,7 @@ export default function PilarDetail({
   const [searchTerm] = useState("");
   const [lightboxDoc, setLightboxDoc] = useState<{id: string, month: string, url: string} | null>(null);
   const [loading, setLoading] = useState(true);
+  const isFirstLoad = useRef(true);
 
   // Chart States
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
@@ -138,6 +162,14 @@ export default function PilarDetail({
         }
       }
       setLoading(false);
+      
+      if (isFirstLoad.current) {
+        // Scroll to top to ensure user sees the header first
+        setTimeout(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }, 50);
+        isFirstLoad.current = false;
+      }
     }
     load();
   }, [pilarId, selectedGraphTahun]);
@@ -372,13 +404,14 @@ export default function PilarDetail({
                     {idx + 1}
                   </td>
                   <td className="px-2 sm:px-3 py-2 sm:py-3 font-medium text-white max-w-[200px] leading-tight text-left text-[12px]">
-                    {ind.nama_indikator}
+                    {formatIndicatorName(ind.nama_indikator)}
                   </td>
                   <td className="px-2 sm:px-3 py-2 sm:py-3 align-top whitespace-nowrap text-center">
                     {ind.satuan || "-"}
                   </td>
                   <td className="px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-medium text-primary-cyan align-top whitespace-nowrap">
                     {Number(ind.target_tahunan || 0).toLocaleString("id-ID")}
+                    {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
                   </td>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((bulan) => {
                     const capList = ind.capaian_kpi || ind.capains || [];
@@ -399,18 +432,28 @@ export default function PilarDetail({
                         key={bulan}
                         className="px-1 sm:px-2 py-2 sm:py-3 text-center align-middle"
                       >
-                        <div className="flex flex-col gap-1.5 items-center min-w-[55px] max-w-[70px] mx-auto">
+                        <div className="flex flex-col gap-1.5 items-center min-w-[75px] mx-auto">
                           <div 
-                            className="w-full bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-1 font-medium transition-all hover:bg-blue-500/20" 
+                            className="w-full bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-2 whitespace-nowrap font-medium transition-all hover:bg-blue-500/20" 
                             title={`Target Bulan ${bulan}`}
                           >
-                            {targetVal > 0 ? targetVal.toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "-"}
+                            {targetVal > 0 ? (
+                              <>
+                                {targetVal.toLocaleString("id-ID", { maximumFractionDigits: 1 })}
+                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                              </>
+                            ) : "-"}
                           </div>
                           <div 
-                            className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-1 font-semibold transition-all hover:bg-emerald-500/20" 
+                            className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-2 whitespace-nowrap font-semibold transition-all hover:bg-emerald-500/20" 
                             title={`Realisasi Bulan ${bulan}`}
                           >
-                            {realisasiVal !== null ? Number(realisasiVal).toLocaleString("id-ID", { maximumFractionDigits: 1 }) : "-"}
+                            {realisasiVal !== null ? (
+                              <>
+                                {Number(realisasiVal).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
+                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                              </>
+                            ) : "-"}
                           </div>
                         </div>
                       </td>
@@ -512,7 +555,17 @@ export default function PilarDetail({
                     fill="#3B82F6"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={50}
-                  />
+                  >
+                    <LabelList
+                      dataKey="Target"
+                      position="top"
+                      fill="#ffffff"
+                      fontSize={11}
+                      formatter={(val: number) =>
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
+                      }
+                    />
+                  </Bar>
                   <Bar
                     dataKey="Realisasi"
                     fill="#10B981"
@@ -567,7 +620,18 @@ export default function PilarDetail({
                     strokeWidth={3}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
-                  />
+                  >
+                    <LabelList
+                      dataKey="Target"
+                      position="top"
+                      fill="#ffffff"
+                      fontSize={11}
+                      offset={10}
+                      formatter={(val: number) =>
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
+                      }
+                    />
+                  </Line>
                   <Line
                     type="monotone"
                     dataKey="Realisasi"
@@ -617,20 +681,12 @@ export default function PilarDetail({
                   className="bg-[#131B2A]/60 border border-white/5 rounded-2xl overflow-hidden hover:border-white/20 transition-all shadow-xl flex flex-col group relative"
                   style={{ minHeight: '300px' }}
                 >
-                  <div className="bg-dark-navy px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary-cyan" />
-                      <h3 className="text-sm font-semibold text-white uppercase">
-                        Realisasi Bulan {doc.month}
-                      </h3>
-                    </div>
-                  </div>
                   <div 
-                    className="flex-1 w-full relative bg-black/50 p-4 flex flex-col items-center justify-center cursor-pointer overflow-hidden group-hover:bg-black/40 transition-all" 
+                    className="flex-1 w-full relative bg-black/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden group-hover:bg-black/40 transition-all" 
                     onClick={() => setLightboxDoc(doc)}
                   >
                     {isPdf ? (
-                      <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="flex flex-col items-center justify-center gap-2 p-4">
                         <FileText className="w-16 h-16 text-red-400" />
                         <span className="text-gray-300 font-medium">Lihat PDF</span>
                       </div>
@@ -639,7 +695,7 @@ export default function PilarDetail({
                         <img
                           src={doc.url}
                           alt={`Dokumen ${doc.month}`}
-                          className="w-full h-48 object-cover rounded-lg border border-white/10 group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full min-h-[300px] max-h-[400px] object-contain group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
                           <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-xl">

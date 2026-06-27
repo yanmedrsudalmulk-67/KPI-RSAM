@@ -52,10 +52,16 @@ export async function getIndicatorsByPilar(pilarId: number) {
     .order('id', { ascending: true });
   if (error) throw error;
 
-  return (data || []).map(ind => ({
-    ...ind,
-    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
-  })) as IndikatorKPI[];
+  return (data || []).map(ind => {
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+    return {
+      ...ind,
+      nama_indikator,
+    };
+  }) as IndikatorKPI[];
 }
 
 export async function getPilarDetail(pilarId: number, tahun?: number) {
@@ -98,9 +104,14 @@ export async function getPilarDetail(pilarId: number, tahun?: number) {
        else if (progress >= 80) status = "Perlu perhatian";
     }
 
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+
     return {
       ...ind,
-      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+      nama_indikator,
       capaian_kpi: ind.capaian_kpi, // Keep all-years list for table reference
       latestCapaian,
       totalRealisasi,
@@ -122,10 +133,16 @@ export async function getIndicators() {
     .order('id', { ascending: true });
   if (error) throw error;
   
-  return (data || []).map(ind => ({
-    ...ind,
-    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
-  }));
+  return (data || []).map(ind => {
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+    return {
+      ...ind,
+      nama_indikator
+    };
+  });
 }
 
 export async function getDashboardSummary(tahun: number, bulan: number) {
@@ -269,10 +286,15 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
     const indCapaians = capData.filter(c => c.indikator_id === ind.id);
     const pilarName = ind.pilar || '';
 
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+
     return {
       ...ind,
       nama_pilar: pilarName,
-      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+      nama_indikator,
       target_tahunan: ind.target_tahunan !== undefined && ind.target_tahunan !== null ? ind.target_tahunan : (ind.target || 0),
       capaians: indCapaians
     };

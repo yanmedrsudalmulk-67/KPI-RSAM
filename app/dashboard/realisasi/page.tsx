@@ -527,10 +527,8 @@ export default function LaporanRealisasiPage() {
                               Target Tahunan
                             </p>
                             <p className="text-white font-mono font-medium text-center">
-                              {targetTahunan.toLocaleString("id-ID")}{" "}
-                              <span className="text-[10px] text-gray-500 font-sans">
-                                {ind.satuan}
-                              </span>
+                              {targetTahunan.toLocaleString("id-ID")}
+                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
                             </p>
                           </div>
                           <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
@@ -540,10 +538,8 @@ export default function LaporanRealisasiPage() {
                             <p className="text-gray-200 font-mono font-medium text-center">
                               {targetBulanan.toLocaleString("id-ID", {
                                 maximumFractionDigits: 1,
-                              })}{" "}
-                              <span className="text-[10px] text-gray-500 font-sans">
-                                {ind.satuan}
-                              </span>
+                              })}
+                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
                             </p>
                           </div>
                         </div>
@@ -641,6 +637,7 @@ export default function LaporanRealisasiPage() {
                             {Number(
                               selectedIndikator.target_tahunan || 0,
                             ).toLocaleString("id-ID")}
+                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
                           </p>
                         </div>
                         <div className="text-center">
@@ -651,6 +648,7 @@ export default function LaporanRealisasiPage() {
                             {targetBulananVal.toLocaleString("id-ID", {
                               maximumFractionDigits: 1,
                             })}
+                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
                           </p>
                         </div>
                       </>

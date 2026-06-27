@@ -449,21 +449,21 @@ export default function InputKpiPage() {
         </h3>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+      <div className="flex flex-row justify-between items-center gap-4 mb-4 w-full">
         {/* Animated Border Container */}
-        <div className="relative p-[2px] rounded-full overflow-hidden group w-full md:w-max">
+        <div className="relative p-[2px] rounded-full overflow-hidden group w-auto">
           {/* Rotating gradient background */}
           <div className="absolute inset-[-1000%] animate-[spin_4s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_0%,#4facfe_25%,#f093fb_50%,#f5576c_75%,transparent_100%)] opacity-80" />
           
-          <div className="relative overflow-hidden flex items-center gap-2 bg-[#0b1120] rounded-full p-1 px-3 w-full md:w-auto backdrop-blur-xl z-10 transition-all duration-300 hover:scale-[1.02] shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
-            <label className="text-xs font-medium text-gray-300 pl-1">
+          <div className="relative overflow-hidden flex items-center gap-2 bg-[#0b1120] rounded-full p-1 px-3 w-auto backdrop-blur-xl z-10 transition-all duration-300 hover:scale-[1.02] shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+            <label className="text-[10px] sm:text-xs font-medium text-gray-300 pl-1">
               Pilih Tahun:
             </label>
             <div className="relative flex items-center">
               <select
                 value={tahun}
                 onChange={(e) => setTahun(parseInt(e.target.value))}
-                className="px-3 py-1.5 pr-6 bg-black/30 border border-white/5 rounded-lg text-white focus:outline-none focus:border-white/20 transition-colors appearance-none min-w-[90px] text-xs font-semibold tracking-wide cursor-pointer"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 pr-5 sm:pr-6 bg-black/30 border border-white/5 rounded-lg text-white focus:outline-none focus:border-white/20 transition-colors appearance-none min-w-[70px] sm:min-w-[90px] text-[10px] sm:text-xs font-semibold tracking-wide cursor-pointer"
               >
                 {[2024, 2025, 2026, 2027].map((y) => (
                   <option key={y} value={y} className="bg-[#0f172a] text-white">
@@ -471,26 +471,26 @@ export default function InputKpiPage() {
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-white/70 absolute right-2 pointer-events-none" />
+              <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/70 absolute right-1.5 sm:right-2 pointer-events-none" />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-row items-center gap-3 w-auto">
           {lastUpdated && (
-            <div className="text-xs text-gray-400 mr-2">
+            <div className="text-xs text-gray-400 mr-2 hidden md:block">
               Terakhir diperbarui: {lastUpdated.toLocaleString("id-ID")}
             </div>
           )}
           <button
             disabled={isSaving}
             onClick={handleSave}
-            className="flex flex-1 md:flex-none justify-center items-center gap-2 px-6 py-2 bg-gradient-to-r from-primary-cyan to-blue-500 rounded-lg text-sm text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 min-w-[160px]"
+            className="flex flex-none justify-center items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 bg-gradient-to-r from-primary-cyan to-blue-500 rounded-lg text-xs sm:text-sm text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-50 min-w-[110px] sm:min-w-[140px]"
           >
             {isSaving ? (
-              <span className="animate-spin text-lg block w-4 h-4 rounded-full border-2 border-white/20 border-t-white" />
+              <span className="animate-spin text-sm block w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white" />
             ) : (
-              <Save className="w-4 h-4" />
+              <Save className="w-3.5 h-3.5" />
             )}
             Simpan Data
           </button>
@@ -519,36 +519,36 @@ export default function InputKpiPage() {
       <div className="p-1 rounded-2xl bg-gradient-to-br from-primary-purple/20 via-transparent to-primary-cyan/20">
         <div className="bg-[#131B2A] rounded-xl overflow-hidden border border-white/5 shadow-2xl relative">
           <div className="overflow-x-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-            <table className="w-full text-left text-[11px] sm:text-xs whitespace-nowrap table-fixed">
+            <table className="w-full text-left text-[11px] sm:text-xs whitespace-nowrap">
               <thead className="sticky top-0 z-30 bg-[#310554] backdrop-blur-md text-white">
                 <tr>
-                  <th className="sticky top-0 left-0 z-40 bg-[#310554] px-2 py-3 font-semibold text-center border-b border-r border-white/10 w-12 min-w-[48px] max-w-[48px]">
+                  <th className="px-2 py-3 font-semibold text-center border-b border-r border-white/10 w-12 min-w-[48px] max-w-[48px]">
                     NO
                   </th>
-                  <th className="sticky top-0 left-[48px] z-40 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 w-[240px] min-w-[240px] max-w-[240px]">
+                  <th className="px-4 py-3 font-semibold text-center border-b border-r border-white/10 w-[280px] min-w-[280px] max-w-[280px]">
                     URAIAN KPI
                   </th>
-                  <th className="sticky top-0 left-[288px] z-40 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-24 min-w-[96px] max-w-[96px]">
+                  <th className="px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-24 min-w-[96px] max-w-[96px]">
                     SATUAN
                   </th>
-                  <th className="sticky top-0 left-[384px] z-40 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-[150px] min-w-[150px] max-w-[150px] text-[11px] leading-tight tracking-tight uppercase">
+                  <th className="px-3 py-3 font-semibold text-center border-b border-r border-white/10 w-[210px] min-w-[210px] max-w-[210px] leading-tight tracking-tight uppercase">
                     TARGET TAHUNAN
                   </th>
                   {MONTHS.map((m, idx) => (
                     <th
                       key={m}
-                      className={`sticky top-0 z-30 px-2 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[160px] w-44 ${idx % 2 === 0 ? "bg-[#581c87]" : "bg-[#310554]"}`}
+                      className={`px-2 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[165px] w-40 ${idx % 2 === 0 ? "bg-[#581c87]" : "bg-[#310554]"}`}
                     >
                       {m.toUpperCase()}
                     </th>
                   ))}
-                  <th className="sticky top-0 z-30 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[140px] w-40">
+                  <th className="px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[140px] w-40">
                     TOTAL
                   </th>
-                  <th className="sticky top-0 z-30 bg-[#310554] px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[90px] w-24">
+                  <th className="px-4 py-3 font-semibold text-center border-b border-r border-white/10 min-w-[90px] w-24">
                     %
                   </th>
-                  <th className="sticky top-0 z-30 bg-[#310554] px-3 py-3 font-semibold text-center border-b border-white/10 min-w-[140px] w-40">
+                  <th className="px-3 py-3 font-semibold text-center border-b border-white/10 min-w-[140px] w-40">
                     STATUS
                   </th>
                 </tr>
@@ -566,13 +566,17 @@ export default function InputKpiPage() {
                     </td>
                   </tr>
                 ) : (
-                  Object.entries(groupedData).map(
-                    ([pilarName, inds], groupIndex) => (
-                      <React.Fragment key={pilarName}>
-                        {/* Pilar Header Row */}
-                        <tr className="bg-[#1a0f2b]">
-                          <td className="sticky left-0 z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-12 min-w-[48px] max-w-[48px]"></td>
-                          <td className="sticky left-[48px] z-20 px-4 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] uppercase whitespace-normal leading-tight text-[10px] w-[240px] min-w-[240px] max-w-[240px]">
+                  (() => {
+                    let globalRowIdx = 0;
+                    return Object.entries(groupedData).map(
+                      ([pilarName, inds], groupIndex) => {
+                        globalRowIdx++; // Increment for the Pilar Header Row (Row 1)
+                        return (
+                          <React.Fragment key={pilarName}>
+                            {/* Pilar Header Row */}
+                            <tr className="bg-[#1a0f2b]">
+                          <td className="px-2 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-12 min-w-[48px] max-w-[48px]"></td>
+                          <td className="px-4 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] uppercase whitespace-normal leading-tight w-[280px] min-w-[280px] max-w-[280px]">
                             {pilarName.includes(
                               "DAN PROGRAM PRIORITAS LAINNYA",
                             ) ? (
@@ -588,15 +592,16 @@ export default function InputKpiPage() {
                               pilarName
                             )}
                           </td>
-                          <td className="sticky left-[288px] z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-24 min-w-[96px] max-w-[96px]"></td>
-                          <td className="sticky left-[384px] z-20 px-1 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-[150px] min-w-[150px] max-w-[150px]"></td>
+                          <td className="px-2 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-24 min-w-[96px] max-w-[96px]"></td>
+                          <td className="px-2 py-2 font-bold text-white border-r border-white/10 bg-[#1a0f2b] w-[210px] min-w-[210px] max-w-[210px]"></td>
                           <td
-                            className="px-1 py-2 border-r border-white/10 bg-[#1a0f2b]"
+                            className="px-2 py-2 border-r border-white/10 bg-[#1a0f2b]"
                             colSpan={15}
                           ></td>
                         </tr>
                         {/* Indicators Rows */}
                         {getPilarRows(pilarName, inds).map((rowItem, rowIdx) => {
+                          const itemRowIdx = ++globalRowIdx;
                           const isEven = rowIdx % 2 === 0;
                           const rowBgClass = isEven ? "bg-[#140e24]" : "bg-[#1e1433]";
                           const stickyBgClass = isEven ? "bg-[#140e24]" : "bg-[#1e1433]";
@@ -605,33 +610,33 @@ export default function InputKpiPage() {
                           if (rowItem.isHeader) {
                             return (
                               <tr key={rowItem.id} className="bg-[#24133d] group border-b border-white/5">
-                                <td className="sticky left-0 z-10 px-2 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-300 font-mono text-[11px] sm:text-xs w-12 min-w-[48px] max-w-[48px]">
+                                <td className="px-2 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-300 font-mono w-12 min-w-[48px] max-w-[48px]">
                                   {rowItem.no}
                                 </td>
-                                <td className="sticky left-[48px] z-10 px-4 py-3 border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-white font-bold text-[11px] w-[240px] min-w-[240px] max-w-[240px] whitespace-normal leading-relaxed text-left pl-4">
+                                <td className={`px-4 py-3 border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-white whitespace-normal leading-relaxed w-[280px] min-w-[280px] max-w-[280px] ${itemRowIdx === 4 || itemRowIdx === 6 ? "font-normal" : "font-bold"}`}>
                                   {rowItem.name}
                                 </td>
-                                <td className="sticky left-[288px] z-10 px-3 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-500 text-[11px] sm:text-xs w-24 min-w-[96px] max-w-[96px]">
+                                <td className="px-3 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-500 w-24 min-w-[96px] max-w-[96px]">
                                   -
                                 </td>
-                                <td className="sticky left-[384px] z-10 px-3 py-2 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all w-[150px] min-w-[150px] max-w-[150px]">
+                                <td className="px-3 py-2 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all w-[210px] min-w-[210px] max-w-[210px]">
                                   -
                                 </td>
                                 {MONTHS.map((_, mIdx) => (
                                   <td
                                     key={mIdx}
-                                    className={`px-2 py-2 border-r border-white/10 text-center text-gray-500 font-mono text-xs min-w-[160px] w-44 ${mIdx % 2 === 0 ? "bg-[#291745]" : "bg-[#201038]"}`}
+                                    className={`px-2 py-2 border-r border-white/10 text-center text-gray-500 font-mono min-w-[165px] w-40 ${mIdx % 2 === 0 ? "bg-[#291745]" : "bg-[#201038]"}`}
                                   >
                                     -
                                   </td>
                                 ))}
-                                <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-semibold text-gray-500 text-[11px] sm:text-xs min-w-[140px] w-40 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-semibold text-gray-500 bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[140px] w-40">
                                   -
                                 </td>
-                                <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-bold text-gray-500 text-[11px] sm:text-xs min-w-[90px] w-24 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-bold text-gray-500 bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[90px] w-24">
                                   -
                                 </td>
-                                <td className="px-3 py-3 text-center min-w-[140px] w-40 bg-[#24133d] group-hover:bg-[#2f1b4d]">
+                                <td className="px-3 py-3 text-center bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[140px] w-40">
                                   -
                                 </td>
                               </tr>
@@ -673,16 +678,16 @@ export default function InputKpiPage() {
                               key={ind.id}
                               className={`${rowBgClass} transition-colors group`}
                             >
-                              <td className={`sticky left-0 z-10 px-2 py-3 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all text-gray-400 font-mono text-[11px] sm:text-xs w-12 min-w-[48px] max-w-[48px]`}>
+                              <td className={`px-2 py-3 text-center border-r border-white/10 ${stickyHoverClass} transition-all text-gray-400 font-mono w-12 min-w-[48px] max-w-[48px]`}>
                                 {rowItem.no}
                               </td>
-                              <td className={`sticky left-[48px] z-10 px-4 py-3 border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all whitespace-normal w-[240px] min-w-[240px] max-w-[240px] leading-relaxed text-left font-medium ${isSubItem ? "pl-8 text-gray-300 font-normal text-[10px]" : "pl-4 text-white font-semibold text-[11px]"}`}>
+                              <td className={`px-4 py-3 border-r border-white/10 ${stickyHoverClass} transition-all whitespace-normal leading-relaxed w-[280px] min-w-[280px] max-w-[280px] text-[11px] ${isSubItem ? "pl-8 text-gray-300 font-normal" : (itemRowIdx === 4 || itemRowIdx === 6 ? "text-white font-normal" : "text-white font-semibold")}`}>
                                 {rowItem.name}
                               </td>
-                              <td className={`sticky left-[288px] z-10 px-3 py-3 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all text-gray-200 text-[11px] sm:text-xs font-semibold w-24 min-w-[96px] max-w-[96px]`}>
+                              <td className={`px-3 py-3 text-center border-r border-white/10 ${stickyHoverClass} transition-all text-gray-200 font-semibold w-24 min-w-[96px] max-w-[96px]`}>
                                 {ind.satuan}
                               </td>
-                              <td className={`sticky left-[384px] z-10 px-3 py-2 text-center border-r border-white/10 ${stickyBgClass} ${stickyHoverClass} transition-all w-[150px] min-w-[150px] max-w-[150px]`}>
+                              <td className={`px-3 py-2 text-center border-r border-white/10 ${stickyHoverClass} transition-all w-[210px] min-w-[210px] max-w-[210px]`}>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -691,7 +696,7 @@ export default function InputKpiPage() {
                                     handleTargetChange(ind.id, e.target.value, ind.satuan || "");
                                   }}
                                   placeholder={placeholder}
-                                  className="w-[130px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50 text-[11px] sm:text-xs"
+                                  className="w-[170px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50"
                                 />
                               </td>
 
@@ -704,7 +709,7 @@ export default function InputKpiPage() {
                                 return (
                                   <td
                                     key={b}
-                                    className={`px-2 py-2 border-r border-white/10 text-center min-w-[160px] w-44 ${mIdx % 2 === 0 ? "bg-white/[0.02]" : ""}`}
+                                    className={`px-2 py-2 border-r border-white/10 text-center min-w-[165px] w-40 ${mIdx % 2 === 0 ? "bg-white/[0.02]" : ""}`}
                                   >
                                     <input
                                       type="text"
@@ -714,21 +719,21 @@ export default function InputKpiPage() {
                                         handleInputChange(ind.id, b, e.target.value, ind.satuan || "");
                                       }}
                                       placeholder="-"
-                                      className="w-[140px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50 text-[11px] sm:text-xs"
+                                      className="w-[140px] px-2 py-1.5 bg-black/50 border rounded text-white focus:outline-none focus:ring-1 focus:ring-primary-cyan text-center font-mono transition-all border-white/10 focus:border-primary-cyan/50"
                                     />
                                   </td>
                                 );
                               })}
 
-                              <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-semibold text-gray-100 text-[11px] sm:text-xs min-w-[140px] w-40">
+                              <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-semibold text-gray-100 min-w-[140px] w-40">
                                 {formatValue(totalTargetBulanan.toString(), ind.satuan || "") || "0"}
                               </td>
-                              <td className="px-4 py-3 text-right border-r border-white/10 font-mono font-bold text-white text-[11px] sm:text-xs min-w-[90px] w-24">
+                              <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-bold text-white min-w-[90px] w-24">
                                 {progress.toFixed(1)}%
                               </td>
                               <td className="px-3 py-3 text-center min-w-[140px] w-40">
                                 <span
-                                  className={`inline-block px-2 py-1 flex items-center justify-center text-[10px] sm:text-[11px] font-semibold rounded-full whitespace-nowrap ${
+                                  className={`inline-block px-3 py-1 flex items-center justify-center font-semibold rounded-full whitespace-nowrap min-w-[100px] mx-auto text-center ${
                                     status === "Tercapai"
                                       ? "bg-primary-green/10 text-primary-green"
                                       : status === "Perlu perhatian"
@@ -743,8 +748,9 @@ export default function InputKpiPage() {
                           );
                         })}
                       </React.Fragment>
-                    ),
-                  )
+                    );
+                  });
+                })()
                 )}
               </tbody>
             </table>
