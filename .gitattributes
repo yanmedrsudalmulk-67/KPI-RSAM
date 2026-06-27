@@ -1,0 +1,18 @@
+# Handle line endings automatically for files detected as text
+# and force LF (Unix-style) line endings upon checkout.
+* text=auto eol=lf
+
+# Explicitly declare files that are always binary or text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.svg text
+*.json text
+*.js text
+*.ts text
+*.tsx text
+*.css text
+*.md text

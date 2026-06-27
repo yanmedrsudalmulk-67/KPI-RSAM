@@ -15,12 +15,9 @@ import {
   ChevronRight,
   Menu,
   X,
-  FileOutput,
-  Target,
-  ClipboardCheck
+  FileOutput
 } from "lucide-react";
 import RSLogo from "@/components/RSLogo";
-import { AnimatedTargetIcon } from "@/components/AnimatedTargetIcon";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -59,14 +56,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
           <NavItem 
             href="/dashboard/input" 
-            icon={<AnimatedTargetIcon active={pathname === "/dashboard/input"} />} 
+            icon={<Activity />} 
             label="Target KPI" 
             active={pathname === "/dashboard/input"} 
             isCollapsed={isCollapsed}
           />
           <NavItem 
             href="/dashboard/realisasi" 
-            icon={<ClipboardCheck />} 
+            icon={<FileText />} 
             label="Realisasi" 
             active={pathname === "/dashboard/realisasi"} 
             isCollapsed={isCollapsed}
@@ -151,8 +148,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Mobile Floating Bottom Navigation */}
         <nav className="md:hidden fixed bottom-6 left-4 right-4 z-40 bg-dark-charcoal/30 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center justify-between p-1.5 px-2">
           <MobileBottomItem href="/dashboard" icon={<LayoutDashboard />} label="Dashboard" active={pathname === "/dashboard"} />
-          <MobileBottomItem href="/dashboard/input" icon={<AnimatedTargetIcon active={pathname === "/dashboard/input"} />} label="Target KPI" active={pathname === "/dashboard/input"} />
-          <MobileBottomItem href="/dashboard/realisasi" icon={<ClipboardCheck />} label="Realisasi" active={pathname === "/dashboard/realisasi"} />
+          <MobileBottomItem href="/dashboard/input" icon={<Activity />} label="Target KPI" active={pathname === "/dashboard/input"} />
+          <MobileBottomItem href="/dashboard/realisasi" icon={<FileText />} label="Realisasi" active={pathname === "/dashboard/realisasi"} />
           <MobileBottomItem href="/dashboard/grafik" icon={<BarChart3 />} label="Grafik" active={pathname === "/dashboard/grafik"} />
           <button 
             onClick={() => setIsMobileMenuOpen(true)}

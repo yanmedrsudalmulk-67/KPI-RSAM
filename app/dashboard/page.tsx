@@ -6,40 +6,17 @@ import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCirc
 import Link from "next/link";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend } from "recharts";
 import { getDashboardSummary, PilarKPI } from "@/lib/services/api";
-import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/effect-coverflow";
-import "swiper/css/pagination";
-import "swiper/css/navigation";
-import { EffectCoverflow, Pagination, Navigation, Autoplay } from "swiper/modules";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const [pilars, setPilars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState(new Date().getMonth() + 1);
-  const [sliderImages, setSliderImages] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      
-      // Fetch slider images
-      if (isSupabaseConfigured() && supabase) {
-        try {
-          const { data } = await supabase.from("settings").select("logo_url").eq("id", 1).maybeSingle();
-          if (data && data.logo_url && data.logo_url.startsWith("{")) {
-            const parsed = JSON.parse(data.logo_url);
-            if (parsed.slider_images && Array.isArray(parsed.slider_images)) {
-              setSliderImages(parsed.slider_images);
-            }
-          }
-        } catch (e) {
-          console.warn("Failed to load slider images:", e);
-        }
-      }
-
       if (!isSupabaseConfigured()) {
         setPilars(pilarKpi.map(p => ({
           ...p,
@@ -142,54 +119,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Slider Area */}
-      {sliderImages && sliderImages.length > 0 && (
-        <div className="relative rounded-2xl overflow-hidden py-4 -mx-4 sm:mx-0 w-[calc(100%+2rem)] sm:w-full">
-          <Swiper
-            effect={"coverflow"}
-            grabCursor={true}
-            centeredSlides={true}
-            slidesPerView={"auto"}
-            coverflowEffect={{
-              rotate: 0,
-              stretch: 0,
-              depth: 100,
-              modifier: 2.5,
-              slideShadows: true,
-            }}
-            loop={true}
-            autoplay={{
-              delay: 5000,
-              disableOnInteraction: false,
-              pauseOnMouseEnter: true,
-            }}
-            pagination={{ clickable: true, dynamicBullets: true }}
-            modules={[EffectCoverflow, Pagination, Autoplay]}
-            className="w-full h-full pb-8"
-            observer={true}
-            observeParents={true}
-          >
-            {/* Duplicate images if less than 5 to ensure smooth infinite loop */}
-            {(sliderImages.length < 5 
-              ? [...sliderImages, ...sliderImages, ...sliderImages, ...sliderImages].slice(0, Math.max(5, sliderImages.length * 2))
-              : sliderImages
-            ).map((src, index) => (
-              <SwiperSlide key={`${src}-${index}`} className="max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%]">
-                <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-                  <img
-                    src={src}
-                    alt={`Slide ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Subtle vignette/overlay for depth */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 pointer-events-none" />
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-      )}
-
       {/* 7 Pilar Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {pilars.map((pilar, index) => (
@@ -240,7 +169,7 @@ export default function DashboardPage() {
                 <div className={`h-full rounded-full bg-gradient-to-r ${pilar.color}`} style={{ width: `${pilar.progress}%` }} />
               </div>
               
-              <Link href={`/dashboard/pilar/${pilar.id}?tahun=${tahun}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
+              <Link href={`/dashboard/pilar/${pilar.id}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
                 Lihat Detail <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>

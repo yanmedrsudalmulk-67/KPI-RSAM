@@ -52,7 +52,7 @@ CREATE TABLE public.settings (
 
 -- 5. POPULASI DATA AWAL INDIKATOR KPI
 INSERT INTO public.indikator_kpi (id, nomor, pilar, uraian_kpi, satuan, target_tahunan) VALUES
-(1, 1, 'PILAR 1 - KETENAGAKERJAAN', 'Jumlah PPPKPW/THL yang dapat ditampung', 'Orang', 5),
+(1, 1, 'PILAR 1 - KETENAGAKERJAAN', 'Jumlah PPPK/PWTHL yang dapat ditampung', 'Orang', 5),
 (2, 2, 'PILAR 2 - TLHP BPK RI', 'Persentase Penyelesaian LHP BPK', 'Persen', 100),
 (3, 3, 'PILAR 3 - OPTIMALISASI ASET', 'Jumlah aset yang dimanfaatkan - a. Pemanfaatan lahan parkir', 'Hektar', 0.1),
 (4, 4, 'PILAR 3 - OPTIMALISASI ASET', 'Jumlah aset yang dimanfaatkan - b. Bangunan yang disewakan', 'Unit', 1),

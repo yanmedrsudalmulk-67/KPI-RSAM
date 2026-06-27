@@ -38,29 +38,6 @@ const MONTHS = [
   "Desember",
 ];
 
-const formatIndicatorName = (name: string) => {
-  if (!name) return null;
-  if (name.includes("Jumlah aset yang dimanfaatkan - ")) {
-    const parts = name.split(" - ");
-    return (
-      <div className="flex flex-col">
-        <span className="text-gray-400 text-xs font-medium">Jumlah aset yang dimanfaatkan :</span>
-        <span className="text-white font-semibold text-sm leading-snug mt-0.5">{parts[1]}</span>
-      </div>
-    );
-  }
-  if (name.includes("Cross selling - ")) {
-    const parts = name.split(" - ");
-    return (
-      <div className="flex flex-col">
-        <span className="text-gray-400 text-xs font-medium">Cross selling :</span>
-        <span className="text-white font-semibold text-sm leading-snug mt-0.5">{parts[1]}</span>
-      </div>
-    );
-  }
-  return <span className="text-white font-semibold text-sm leading-normal">{name}</span>;
-};
-
 export default function LaporanRealisasiPage() {
   const [tahun, setTahun] = useState<number>(new Date().getFullYear());
   const [bulan, setBulan] = useState<number>(new Date().getMonth() + 1);
@@ -72,8 +49,8 @@ export default function LaporanRealisasiPage() {
   const [selectedIndikator, setSelectedIndikator] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [inputRealisasi, setInputRealisasi] = useState<string>("");
-  const [inputFiles, setInputFiles] = useState<File[]>([]);
-  const [dokumenUrls, setDokumenUrls] = useState<string[]>([]);
+  const [inputFile, setInputFile] = useState<File | null>(null);
+  const [dokumenUrl, setDokumenUrl] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMode, setSuccessMode] = useState(false);
@@ -173,28 +150,13 @@ export default function LaporanRealisasiPage() {
     if (existingCapaian) {
       setHasExistingData(true);
       setInputRealisasi(formatValue(existingCapaian.realisasi.toString(), ind.satuan || ""));
-      try {
-        const parsed = JSON.parse(existingCapaian.dokumen_url);
-        if (Array.isArray(parsed)) {
-          setDokumenUrls(parsed);
-        } else if (existingCapaian.dokumen_url) {
-          setDokumenUrls([existingCapaian.dokumen_url]);
-        } else {
-          setDokumenUrls([]);
-        }
-      } catch (e) {
-        if (existingCapaian.dokumen_url) {
-          setDokumenUrls([existingCapaian.dokumen_url]);
-        } else {
-          setDokumenUrls([]);
-        }
-      }
+      setDokumenUrl(existingCapaian.dokumen_url || "");
     } else {
       setHasExistingData(false);
       setInputRealisasi("");
-      setDokumenUrls([]);
+      setDokumenUrl("");
     }
-    setInputFiles([]);
+    setInputFile(null);
     setIsModalOpen(true);
   };
 
@@ -225,13 +187,10 @@ export default function LaporanRealisasiPage() {
       if (pct >= 100) status = "Tercapai";
       else if (pct >= 80) status = "Perlu perhatian";
 
-      let finalDokumenUrls = [...dokumenUrls];
+      let finalDokumenUrl = dokumenUrl;
 
-      if (isSupabaseConfigured() && inputFiles.length > 0) {
-        for (const file of inputFiles) {
-          const url = await uploadDokumenRealisasi(file);
-          finalDokumenUrls.push(url);
-        }
+      if (isSupabaseConfigured() && inputFile) {
+        finalDokumenUrl = await uploadDokumenRealisasi(inputFile);
       }
 
       const payload = {
@@ -242,7 +201,7 @@ export default function LaporanRealisasiPage() {
         realisasi: validValue,
         persentase: pct,
         status: status,
-        dokumen_url: JSON.stringify(finalDokumenUrls),
+        dokumen_url: finalDokumenUrl,
       };
 
       if (isSupabaseConfigured()) {
@@ -338,10 +297,8 @@ export default function LaporanRealisasiPage() {
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-purple/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-        <h1 className="text-2xl md:text-4xl font-extrabold font-poppins bg-gradient-to-r from-blue-400 via-primary-purple to-primary-pink bg-clip-text text-transparent tracking-tight relative z-10 leading-tight">
-          INPUT REALISASI
-          <br />
-          KEY PERFORMANCE INDICATOR (KPI)
+        <h1 className="text-2xl md:text-4xl font-extrabold font-poppins bg-gradient-to-r from-blue-400 via-primary-purple to-primary-pink bg-clip-text text-transparent tracking-tight relative z-10">
+          INPUT REALISASI KEY PERFORMANCE INDICATOR (KPI)
         </h1>
         <h2 className="text-lg md:text-xl font-bold text-white mt-2 relative z-10">
           UOBK RSUD AL-MULK KOTA SUKABUMI
@@ -517,9 +474,9 @@ export default function LaporanRealisasiPage() {
                         <p className="text-xs text-primary-cyan font-semibold mb-1 uppercase tracking-wider">
                           {pilarName}
                         </p>
-                        <div className="mb-1 min-h-[48px] flex items-center">
-                          {formatIndicatorName(ind.nama_indikator || ind.name)}
-                        </div>
+                        <h4 className="text-white font-semibold text-sm mb-1 min-h-[40px] line-clamp-2">
+                          {ind.nama_indikator || ind.name}
+                        </h4>
 
                         <div className="grid grid-cols-2 gap-3 mt-5 mb-5">
                           <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
@@ -527,8 +484,10 @@ export default function LaporanRealisasiPage() {
                               Target Tahunan
                             </p>
                             <p className="text-white font-mono font-medium text-center">
-                              {targetTahunan.toLocaleString("id-ID")}
-                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
+                              {targetTahunan.toLocaleString("id-ID")}{" "}
+                              <span className="text-[10px] text-gray-500 font-sans">
+                                {ind.satuan}
+                              </span>
                             </p>
                           </div>
                           <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
@@ -538,18 +497,26 @@ export default function LaporanRealisasiPage() {
                             <p className="text-gray-200 font-mono font-medium text-center">
                               {targetBulanan.toLocaleString("id-ID", {
                                 maximumFractionDigits: 1,
-                              })}
-                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
+                              })}{" "}
+                              <span className="text-[10px] text-gray-500 font-sans">
+                                {ind.satuan}
+                              </span>
                             </p>
                           </div>
                         </div>
 
                         <button
                           onClick={() => handleOpenModal(ind)}
-                          className="w-full py-2.5 rounded-xl border border-transparent text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-90 shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
+                          className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm
+                            ${
+                              isInputted
+                                ? "bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                                : "bg-gradient-to-r from-blue-600 to-indigo-600 border-transparent text-white hover:opacity-90 shadow-[0_4px_12px_rgba(37,99,235,0.3)]"
+                            }
+                          `}
                         >
                           <Edit3 className="w-4 h-4" />
-                          Input Realisasi
+                          {isInputted ? "Edit Realisasi" : "Input Realisasi"}
                         </button>
                       </div>
                     </div>
@@ -606,9 +573,9 @@ export default function LaporanRealisasiPage() {
                   <p className="text-[11px] text-gray-400 mb-1 uppercase font-semibold">
                     Indikator
                   </p>
-                  <div className="text-sm font-medium text-white">
-                    {formatIndicatorName(selectedIndikator.nama_indikator || selectedIndikator.name)}
-                  </div>
+                  <p className="text-sm font-medium text-white">
+                    {selectedIndikator.nama_indikator || selectedIndikator.name}
+                  </p>
                 </div>
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
                   <div className="text-center">
@@ -637,7 +604,6 @@ export default function LaporanRealisasiPage() {
                             {Number(
                               selectedIndikator.target_tahunan || 0,
                             ).toLocaleString("id-ID")}
-                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
                           </p>
                         </div>
                         <div className="text-center">
@@ -648,7 +614,6 @@ export default function LaporanRealisasiPage() {
                             {targetBulananVal.toLocaleString("id-ID", {
                               maximumFractionDigits: 1,
                             })}
-                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
                           </p>
                         </div>
                       </>
@@ -689,113 +654,74 @@ export default function LaporanRealisasiPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Dokumen Pendukung Realisasi{" "}
                     <span className="text-gray-500 text-xs font-normal">
-                      (Opsional, Maks 10 file)
+                      (Opsional)
                     </span>
                   </label>
 
-                  {/* List of existing saved documents */}
-                  {dokumenUrls.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {dokumenUrls.map((url, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-primary-cyan/10 border border-primary-cyan/30 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary-cyan/20 rounded-lg">
-                              <FileText className="w-5 h-5 text-primary-cyan" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Dokumen tersimpan {idx + 1}
-                              </p>
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary-cyan hover:underline"
-                              >
-                                Lihat Dokumen
-                              </a>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const newUrls = [...dokumenUrls];
-                              newUrls.splice(idx, 1);
-                              setDokumenUrls(newUrls);
-                            }}
-                            className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Hapus Dokumen"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                  {dokumenUrl && !inputFile ? (
+                    <div className="flex items-center justify-between p-4 bg-primary-cyan/10 border border-primary-cyan/30 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary-cyan/20 rounded-lg">
+                          <FileText className="w-5 h-5 text-primary-cyan" />
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* List of new selected files */}
-                  {inputFiles.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {inputFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-primary-green/10 border border-primary-green/30 rounded-xl">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary-green/20 rounded-lg">
-                              <FileText className="w-5 h-5 text-primary-green" />
-                            </div>
-                            <div className="overflow-hidden">
-                              <p className="text-sm font-medium text-white truncate max-w-[150px] sm:max-w-[200px]">
-                                {file.name}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const newFiles = [...inputFiles];
-                              newFiles.splice(idx, 1);
-                              setInputFiles(newFiles);
-                            }}
-                            className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                            title="Batal Upload"
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            Dokumen tersimpan
+                          </p>
+                          <a
+                            href={dokumenUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary-cyan hover:underline"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            Lihat Dokumen
+                          </a>
                         </div>
-                      ))}
+                      </div>
+                      <button
+                        onClick={() => setDokumenUrl("")}
+                        className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        title="Hapus / Ganti Dokumen"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
-
-                  {/* Upload Dropzone */}
-                  {(dokumenUrls.length + inputFiles.length) < 10 && (
+                  ) : inputFile ? (
+                    <div className="flex items-center justify-between p-4 bg-primary-green/10 border border-primary-green/30 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary-green/20 rounded-lg">
+                          <FileText className="w-5 h-5 text-primary-green" />
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-medium text-white truncate max-w-[200px] sm:max-w-[250px]">
+                            {inputFile.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {(inputFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setInputFile(null)}
+                        className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        title="Batal Upload"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
                     <div className="relative group cursor-pointer">
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"
-                        multiple
                         onChange={(e) => {
-                          if (e.target.files && e.target.files.length > 0) {
-                            const newFiles = Array.from(e.target.files);
-                            const totalFiles = dokumenUrls.length + inputFiles.length + newFiles.length;
-                            
-                            if (totalFiles > 10) {
-                              alert("Maksimal total 10 file dokumen yang diperbolehkan.");
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert("Ukuran file maksimal 5 MB");
                               return;
                             }
-
-                            const validFiles = newFiles.filter(f => {
-                              if (f.size > 5 * 1024 * 1024) {
-                                alert(`File ${f.name} melebihi 5 MB dan tidak akan diupload.`);
-                                return false;
-                              }
-                              return true;
-                            });
-
-                            if (validFiles.length > 0) {
-                              setInputFiles([...inputFiles, ...validFiles]);
-                            }
-                            // Reset input value so same files can be selected again if removed
-                            e.target.value = "";
+                            setInputFile(file);
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -803,9 +729,9 @@ export default function LaporanRealisasiPage() {
                       <div className="w-full px-4 py-6 bg-black/30 border-2 border-dashed border-white/20 rounded-xl group-hover:border-primary-cyan group-hover:bg-primary-cyan/5 transition-all flex flex-col items-center justify-center gap-2 text-center">
                         <Upload className="w-6 h-6 text-gray-400 group-hover:text-primary-cyan transition-colors" />
                         <p className="text-sm font-medium text-white group-hover:text-primary-cyan transition-colors">
-                          + Tambah Dokumen (JPG / PNG / PDF)
+                          + Upload JPG / PNG / PDF
                         </p>
-                        <p className="text-xs text-gray-500">Maksimal 5 MB per file. Bisa pilih banyak file.</p>
+                        <p className="text-xs text-gray-500">Maksimal 5 MB</p>
                       </div>
                     </div>
                   )}
@@ -818,8 +744,8 @@ export default function LaporanRealisasiPage() {
               <button
                 onClick={() => {
                   setInputRealisasi("");
-                  setInputFiles([]);
-                  setDokumenUrls([]);
+                  setInputFile(null);
+                  setDokumenUrl("");
                 }}
                 className="px-6 py-3 rounded-xl border border-white/10 text-white font-medium hover:bg-white/5 transition-colors"
               >
