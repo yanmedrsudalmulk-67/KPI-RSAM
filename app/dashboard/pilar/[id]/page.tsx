@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from "react";
+import { use, useState, useEffect, useMemo, useRef } from "react";
 import { pilarKpi, indicators as indKpi } from "@/lib/data";
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Image as ImageIcon,
   FileText,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { getPilarDetail } from "@/lib/services/api";
@@ -26,6 +27,29 @@ import {
   LabelList,
 } from "recharts";
 
+const formatIndicatorName = (name: string) => {
+  if (!name) return null;
+  if (name.includes("Jumlah aset yang dimanfaatkan - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-[10px] sm:text-[11px] font-medium">Jumlah aset yang dimanfaatkan :</span>
+        <span className="text-white font-semibold text-[12px] sm:text-xs leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  if (name.includes("Cross selling - ")) {
+    const parts = name.split(" - ");
+    return (
+      <div className="flex flex-col">
+        <span className="text-gray-400 text-[10px] sm:text-[11px] font-medium">Cross selling :</span>
+        <span className="text-white font-semibold text-[12px] sm:text-xs leading-snug mt-0.5">{parts[1]}</span>
+      </div>
+    );
+  }
+  return <span className="text-white font-semibold text-[12px] sm:text-xs leading-normal">{name}</span>;
+};
+
 export default function PilarDetail({
   params,
 }: {
@@ -36,7 +60,9 @@ export default function PilarDetail({
   const [pilar, setPilar] = useState<any>(null);
   const [indicators, setIndicators] = useState<any[]>([]);
   const [searchTerm] = useState("");
+  const [lightboxDoc, setLightboxDoc] = useState<{id: string, month: string, url: string} | null>(null);
   const [loading, setLoading] = useState(true);
+  const isFirstLoad = useRef(true);
 
   // Chart States
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
@@ -45,6 +71,23 @@ export default function PilarDetail({
   const [selectedGraphTahun, setSelectedGraphTahun] = useState<string>(
     new Date().getFullYear().toString(),
   );
+  const [selectedGraphBulan, setSelectedGraphBulan] = useState<number>(
+    new Date().getMonth() + 1,
+  );
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTahun = params.get("tahun");
+      const urlBulan = params.get("bulan");
+      if (urlTahun) {
+        setSelectedGraphTahun(urlTahun);
+      }
+      if (urlBulan) {
+        setSelectedGraphBulan(parseInt(urlBulan));
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (indicators.length > 0 && !selectedGraphIndikator) {
@@ -57,7 +100,7 @@ export default function PilarDetail({
       let isMock = !isSupabaseConfigured();
       if (isSupabaseConfigured()) {
         try {
-          const { pilar: p, indicators: ind } = await getPilarDetail(pilarId);
+          const { pilar: p, indicators: ind } = await getPilarDetail(pilarId, parseInt(selectedGraphTahun), selectedGraphBulan);
           if (!p) {
             isMock = true;
           } else {
@@ -76,7 +119,7 @@ export default function PilarDetail({
         const foundPilar = pilarKpi.find((p) => p.id === pilarId);
         if (foundPilar) {
           setPilar({ ...foundPilar, nama_pilar: foundPilar.name });
-          const currYear = new Date().getFullYear();
+          const currYear = parseInt(selectedGraphTahun) || new Date().getFullYear();
           setIndicators(
             indKpi
               .filter((i) => i.pilarId === pilarId)
@@ -126,9 +169,17 @@ export default function PilarDetail({
         }
       }
       setLoading(false);
+      
+      if (isFirstLoad.current) {
+        // Scroll to top to ensure user sees the header first
+        setTimeout(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }, 50);
+        isFirstLoad.current = false;
+      }
     }
     load();
-  }, [pilarId]);
+  }, [pilarId, selectedGraphTahun, selectedGraphBulan]);
 
   const selectedIndObj = indicators.find(
     (i) => i.id.toString() === selectedGraphIndikator,
@@ -140,7 +191,7 @@ export default function PilarDetail({
     const targetTahunan = Number(
       selectedIndObj.target_tahunan || selectedIndObj.target || 0,
     );
-    const targetBulanan =
+    const targetBulananDefault =
       targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
 
     const capList = selectedIndObj.capaian_kpi || selectedIndObj.capaians || [];
@@ -166,10 +217,23 @@ export default function PilarDetail({
         (c: any) => c.bulan === i && c.tahun === parseInt(selectedGraphTahun),
       );
 
+      const targetBulananValue = (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null)
+        ? Number(capaian.target_bulanan)
+        : targetBulananDefault;
+
+      const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
+
+      let realisasiPercentage = 0;
+      if (targetBulananValue > 0) {
+        realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+      }
+
+      const targetPercentage = targetBulananValue > 0 ? 100 : 0;
+
       data.push({
         name: months[i - 1],
-        Target: targetBulanan,
-        Realisasi: capaian ? Number(capaian.realisasi) : 0,
+        Target: targetPercentage,
+        Realisasi: realisasiPercentage,
         dokumen_url: capaian ? capaian.dokumen_url : null,
       });
     }
@@ -178,13 +242,36 @@ export default function PilarDetail({
   }, [selectedIndObj, selectedGraphTahun]);
 
   const selectedMonthDocs = useMemo(() => {
-    return chartData
-      .filter((d) => d.dokumen_url)
-      .map((d, index) => ({
-        id: index,
-        month: d.name,
-        url: d.dokumen_url,
-      }));
+    const docs: { id: string, month: string, url: string }[] = [];
+    chartData.forEach((d, index) => {
+      if (d.dokumen_url) {
+        try {
+          const parsed = JSON.parse(d.dokumen_url);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((url, i) => {
+              docs.push({
+                id: `${index}-${i}`,
+                month: d.name,
+                url: url,
+              });
+            });
+          } else {
+            docs.push({
+              id: `${index}`,
+              month: d.name,
+              url: d.dokumen_url,
+            });
+          }
+        } catch (e) {
+          docs.push({
+            id: `${index}`,
+            month: d.name,
+            url: d.dokumen_url,
+          });
+        }
+      }
+    });
+    return docs;
   }, [chartData]);
 
   if (loading) {
@@ -258,22 +345,34 @@ export default function PilarDetail({
 
       {/* Table Section MASTER DATA */}
       <div className="p-4 sm:p-6 rounded-2xl glassmorphism mt-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-semibold text-white font-poppins">
-            CAPAIAN BULANAN
+            REALISASI BULANAN
           </h2>
+          <div className="flex items-center gap-4 text-xs font-medium bg-black/20 px-4 py-2 rounded-lg border border-white/5">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded border border-blue-500/40 bg-blue-500/20"></div>
+              <span className="text-blue-300">Target</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded border border-emerald-500/40 bg-emerald-500/20"></div>
+              <span className="text-emerald-300">Realisasi</span>
+            </div>
+          </div>
         </div>
 
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           <table className="w-full text-left text-[11px] sm:text-xs text-gray-300">
             <thead className="bg-dark-navy/50 text-gray-400 uppercase font-medium whitespace-nowrap">
               <tr>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 rounded-tl-lg">No</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 min-w-[150px]">
+                <th className="px-2 sm:px-3 py-2 sm:py-3 rounded-tl-lg text-center">No</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 min-w-[150px] text-center">
                   Nama Indikator
                 </th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3">Sat</th>
-                <th className="px-2 sm:px-3 py-2 sm:py-3 text-right">Target</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-center">Satuan</th>
+                <th className="px-2 sm:px-3 py-2 sm:py-3 text-center leading-tight">
+                  Target<br />Tahunan
+                </th>
                 {[
                   "Jan",
                   "Feb",
@@ -290,7 +389,7 @@ export default function PilarDetail({
                 ].map((bln, i) => (
                   <th
                     key={bln}
-                    className={`px-2 sm:px-3 py-2 sm:py-3 text-right ${i === 11 ? "rounded-tr-lg" : ""}`}
+                    className={`px-2 sm:px-3 py-2 sm:py-3 text-center ${i === 11 ? "rounded-tr-lg" : ""}`}
                   >
                     {bln}
                   </th>
@@ -299,33 +398,71 @@ export default function PilarDetail({
             </thead>
             <tbody className="divide-y divide-white/5">
               {filteredIndicators.map((ind, idx) => (
-                <tr key={ind.id} className="hover:bg-white/5 transition-colors">
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top">
+                <tr
+                  key={ind.id}
+                  onClick={() => setSelectedGraphIndikator(ind.id.toString())}
+                  className={`cursor-pointer transition-colors ${
+                    selectedGraphIndikator === ind.id.toString()
+                      ? "bg-primary-purple/10 border-l-2 border-primary-purple"
+                      : "hover:bg-white/5"
+                  }`}
+                >
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top text-center">
                     {idx + 1}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 font-medium text-white max-w-[200px] leading-tight">
-                    {ind.nama_indikator}
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 font-medium text-white max-w-[200px] leading-tight text-left text-[12px]">
+                    {formatIndicatorName(ind.nama_indikator)}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top whitespace-nowrap">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 align-top whitespace-nowrap text-center">
                     {ind.satuan || "-"}
                   </td>
-                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-right font-mono font-medium text-primary-cyan align-top whitespace-nowrap">
+                  <td className="px-2 sm:px-3 py-2 sm:py-3 text-center font-mono font-medium text-primary-cyan align-top whitespace-nowrap">
                     {Number(ind.target_tahunan || 0).toLocaleString("id-ID")}
+                    {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
                   </td>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((bulan) => {
-                    const capList = ind.capaian_kpi || ind.capaians || [];
-                    const cap = capList.find((c: any) => c.bulan === bulan);
-                    const val = cap ? cap.realisasi : null;
+                    const capList = ind.capaian_kpi || ind.capains || [];
+                    const cap = capList.find((c: any) => c.bulan === bulan && c.tahun === parseInt(selectedGraphTahun));
+                    
+                    const targetTahunan = Number(ind.target_tahunan || ind.target || 0);
+                    const targetBulananDefault = targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
+                    
+                    let targetVal = targetBulananDefault;
+                    if (cap && cap.target_bulanan !== undefined && cap.target_bulanan !== null) {
+                      targetVal = Number(cap.target_bulanan);
+                    }
+                    
+                    const realisasiVal = cap ? cap.realisasi : null;
+
                     return (
                       <td
                         key={bulan}
-                        className="px-2 sm:px-3 py-2 sm:py-3 text-right font-mono align-top text-white/80"
+                        className="px-1 sm:px-2 py-2 sm:py-3 text-center align-middle"
                       >
-                        {val !== null
-                          ? Number(val).toLocaleString("id-ID", {
-                              maximumFractionDigits: 1,
-                            })
-                          : "-"}
+                        <div className="flex flex-col gap-1.5 items-center min-w-[75px] mx-auto">
+                          <div 
+                            className="w-full bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-2 whitespace-nowrap font-medium transition-all hover:bg-blue-500/20" 
+                            title={`Target Bulan ${bulan}`}
+                          >
+                            {targetVal > 0 ? (
+                              <>
+                                {targetVal.toLocaleString("id-ID", { maximumFractionDigits: 1 })}
+                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                              </>
+                            ) : "-"}
+                          </div>
+                          <div 
+                            className="w-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-2 whitespace-nowrap font-semibold transition-all hover:bg-emerald-500/20" 
+                            title={`Realisasi Bulan ${bulan}`}
+                          >
+                            {realisasiVal !== null ? (
+                              <>
+                                {Number(realisasiVal).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
+                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                              </>
+                            ) : "-"}
+                          </div>
+                        </div>
                       </td>
                     );
                   })}
@@ -356,18 +493,6 @@ export default function PilarDetail({
           </h2>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={selectedGraphIndikator}
-              onChange={(e) => setSelectedGraphIndikator(e.target.value)}
-              className="px-4 py-2 bg-dark-navy border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-cyan text-sm max-w-[200px] truncate"
-            >
-              {indicators.map((ind) => (
-                <option key={ind.id} value={ind.id.toString()}>
-                  {ind.nama_indikator}
-                </option>
-              ))}
-            </select>
-
             <select
               value={selectedGraphTahun}
               onChange={(e) => setSelectedGraphTahun(e.target.value)}
@@ -420,6 +545,7 @@ export default function PilarDetail({
                   <YAxis
                     stroke="#ffffff50"
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tickFormatter={(val) => `${val}%`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -428,6 +554,7 @@ export default function PilarDetail({
                       borderRadius: "12px",
                     }}
                     itemStyle={{ fontWeight: "bold" }}
+                    formatter={(value: any, name: any) => [`${value}%`, name]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar
@@ -435,7 +562,17 @@ export default function PilarDetail({
                     fill="#3B82F6"
                     radius={[4, 4, 0, 0]}
                     maxBarSize={50}
-                  />
+                  >
+                    <LabelList
+                      dataKey="Target"
+                      position="top"
+                      fill="#ffffff"
+                      fontSize={11}
+                      formatter={(val: number) =>
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
+                      }
+                    />
+                  </Bar>
                   <Bar
                     dataKey="Realisasi"
                     fill="#10B981"
@@ -448,7 +585,7 @@ export default function PilarDetail({
                       fill="#ffffff"
                       fontSize={11}
                       formatter={(val: number) =>
-                        val > 0 ? val.toLocaleString("id-ID") : ""
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
                       }
                     />
                   </Bar>
@@ -471,6 +608,7 @@ export default function PilarDetail({
                   <YAxis
                     stroke="#ffffff50"
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tickFormatter={(val) => `${val}%`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -479,6 +617,7 @@ export default function PilarDetail({
                       borderRadius: "12px",
                     }}
                     itemStyle={{ fontWeight: "bold" }}
+                    formatter={(value: any, name: any) => [`${value}%`, name]}
                   />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Line
@@ -488,7 +627,18 @@ export default function PilarDetail({
                     strokeWidth={3}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
-                  />
+                  >
+                    <LabelList
+                      dataKey="Target"
+                      position="top"
+                      fill="#ffffff"
+                      fontSize={11}
+                      offset={10}
+                      formatter={(val: number) =>
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
+                      }
+                    />
+                  </Line>
                   <Line
                     type="monotone"
                     dataKey="Realisasi"
@@ -504,7 +654,7 @@ export default function PilarDetail({
                       fontSize={11}
                       offset={10}
                       formatter={(val: number) =>
-                        val > 0 ? val.toLocaleString("id-ID") : ""
+                        val > 0 ? `${val.toLocaleString("id-ID")}%` : ""
                       }
                     />
                   </Line>
@@ -524,42 +674,42 @@ export default function PilarDetail({
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-white font-poppins flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-primary-pink" />
-            VISUALISASI DOKUMEN REALISASI
+            BUKTI DOKUMEN REALISASI
           </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Dokumen pendukung yang diunggah pada menu Realisasi untuk indikator
-            terpilih.
-          </p>
         </div>
 
         {selectedMonthDocs.length > 0 ? (
-          <div className="grid grid-cols-1 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedMonthDocs.map((doc) => {
-              const isPdf = doc.url.toLowerCase().endsWith(".pdf");
+              const isPdf = doc.url.toLowerCase().includes(".pdf");
               return (
                 <div
                   key={doc.id}
-                  className="bg-black/30 border border-white/10 rounded-2xl overflow-hidden"
+                  className="bg-[#131B2A]/60 border border-white/5 rounded-2xl overflow-hidden hover:border-white/20 transition-all shadow-xl flex flex-col group relative"
+                  style={{ minHeight: '300px' }}
                 >
-                  <div className="bg-dark-navy px-4 py-3 border-b border-white/5 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary-cyan" />
-                    <h3 className="text-sm font-semibold text-white uppercase">
-                      Realisasi Bulan {doc.month}
-                    </h3>
-                  </div>
-                  <div className="w-full bg-black/50 flex items-center justify-center p-4">
+                  <div 
+                    className="flex-1 w-full relative bg-black/50 flex flex-col items-center justify-center cursor-pointer overflow-hidden group-hover:bg-black/40 transition-all" 
+                    onClick={() => setLightboxDoc(doc)}
+                  >
                     {isPdf ? (
-                      <iframe
-                        src={doc.url}
-                        className="w-full h-[600px] rounded-lg border border-white/5 bg-white"
-                        title={`Dokumen ${doc.month}`}
-                      />
+                      <div className="flex flex-col items-center justify-center gap-2 p-4">
+                        <FileText className="w-16 h-16 text-red-400" />
+                        <span className="text-gray-300 font-medium">Lihat PDF</span>
+                      </div>
                     ) : (
-                      <img
-                        src={doc.url}
-                        alt={`Dokumen ${doc.month}`}
-                        className="w-full max-w-full rounded-lg object-contain max-h-[800px] border border-white/5"
-                      />
+                      <>
+                        <img
+                          src={doc.url}
+                          alt={`Dokumen ${doc.month}`}
+                          className="w-full h-full min-h-[300px] max-h-[400px] object-contain group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
+                          <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-xl">
+                            View Gambar
+                          </span>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -579,6 +729,30 @@ export default function PilarDetail({
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setLightboxDoc(null)}></div>
+          <div className="relative z-10 max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
+            <button className="absolute -top-12 right-0 p-2 text-white hover:text-red-400 bg-black/50 hover:bg-black/80 rounded-full transition-colors" onClick={() => setLightboxDoc(null)}>
+              <X className="w-6 h-6" />
+            </button>
+            {lightboxDoc.url.toLowerCase().includes(".pdf") ? (
+              <iframe
+                src={lightboxDoc.url}
+                className="w-full h-[80vh] rounded-2xl bg-white shadow-2xl"
+              />
+            ) : (
+              <img
+                src={lightboxDoc.url}
+                alt="Fullscreen"
+                className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

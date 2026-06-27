@@ -41,6 +41,10 @@ export default function PengaturanPage() {
   const [welcomeVideoInput, setWelcomeVideoInput] = useState<string>("");
   const [menuVideoInput, setMenuVideoInput] = useState<string>("");
 
+  const [sliderImages, setSliderImages] = useState<string[]>([]);
+  const [sliderFiles, setSliderFiles] = useState<File[]>([]);
+  const [isUploadingSlider, setIsUploadingSlider] = useState(false);
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -85,6 +89,7 @@ export default function PengaturanPage() {
             try {
               const parsed = JSON.parse(rawUrl);
               if (parsed.logo_url) setLogoUrl(parsed.logo_url);
+              if (parsed.slider_images && Array.isArray(parsed.slider_images)) setSliderImages(parsed.slider_images);
               
               if (parsed.welcome_bg_type) {
                 setWelcomeBgType(parsed.welcome_bg_type as any);
@@ -115,6 +120,7 @@ export default function PengaturanPage() {
           try {
             const parsed = JSON.parse(actualLogo);
             actualLogo = parsed.logo_url || "";
+            if (parsed.slider_images && Array.isArray(parsed.slider_images)) setSliderImages(parsed.slider_images);
             if (parsed.welcome_bg_type) {
               setWelcomeBgType(parsed.welcome_bg_type as any);
             }
@@ -286,7 +292,132 @@ export default function PengaturanPage() {
     }
   };
 
+  const handleSaveSliderImages = async (urlsToSave: string[]) => {
+    if (!supabase) return;
+    setIsUploadingSlider(true);
+    setStatusMessage(null);
+
+    try {
+      let nextLogoValue: string = "";
+      const { data: currentSettings } = await supabase
+        .from("settings")
+        .select("logo_url, welcome_bg_type, welcome_bg_val, menu_bg_type, menu_bg_val")
+        .eq("id", 1)
+        .maybeSingle();
+      
+      let jsonPayload: any = {};
+      if (currentSettings) {
+        if (currentSettings.logo_url && currentSettings.logo_url.startsWith('{')) {
+          try {
+            jsonPayload = JSON.parse(currentSettings.logo_url);
+          } catch (e) {}
+        } else {
+          jsonPayload = {
+            logo_url: currentSettings.logo_url || "",
+            welcome_bg_type: currentSettings.welcome_bg_type || "default",
+            welcome_bg_val: currentSettings.welcome_bg_val || "",
+            menu_bg_type: currentSettings.menu_bg_type || "default",
+            menu_bg_val: currentSettings.menu_bg_val || ""
+          };
+        }
+      }
+      
+      jsonPayload.slider_images = urlsToSave;
+      nextLogoValue = JSON.stringify(jsonPayload);
+
+      let saveError: any = null;
+      try {
+        const { error: dbError } = await supabase
+          .from("settings")
+          .upsert({
+            id: 1,
+            logo_url: nextLogoValue,
+            welcome_bg_type: jsonPayload.welcome_bg_type || "default",
+            welcome_bg_val: jsonPayload.welcome_bg_val || "",
+            menu_bg_type: jsonPayload.menu_bg_type || "default",
+            menu_bg_val: jsonPayload.menu_bg_val || ""
+          }, { onConflict: "id" });
+
+        if (dbError) {
+          const { error: fallbackDbError } = await supabase
+            .from("settings")
+            .upsert({ id: 1, logo_url: nextLogoValue }, { onConflict: "id" });
+          if (fallbackDbError) saveError = fallbackDbError;
+        }
+      } catch (upsertErr: any) {
+        saveError = upsertErr;
+      }
+
+      if (saveError) {
+        throw new Error(`Gagal menyimpan data slider: ${saveError.message}`);
+      }
+
+      setSliderImages(urlsToSave);
+      setStatusMessage({ type: "success", text: "Slider berhasil diperbarui!" });
+    } catch (error: any) {
+      setStatusMessage({
+        type: "error",
+        text: error.message || "Terjadi kesalahan saat menyimpan slider.",
+      });
+    } finally {
+      setIsUploadingSlider(false);
+    }
+  };
+
+  const handleUploadNewSliderImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0 || !supabase) return;
+
+    if (sliderImages.length + fileList.length > 10) {
+      setStatusMessage({
+        type: "error",
+        text: "Maksimal 10 gambar slider yang diperbolehkan."
+      });
+      e.target.value = '';
+      return;
+    }
+    
+    setIsUploadingSlider(true);
+    setStatusMessage(null);
+    
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < fileList.length; i++) {
+        const f = fileList[i];
+        const fileExt = f.name.split(".").pop();
+        const fileName = `slider-${Date.now()}-${i}.${fileExt}`;
+        const filePath = `sliders/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("assets")
+          .upload(filePath, f, { upsert: true });
+
+        if (uploadError) throw new Error(uploadError.message);
+
+        const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(filePath);
+        newUrls.push(publicUrl);
+      }
+      
+      const updatedImages = [...sliderImages, ...newUrls];
+      await handleSaveSliderImages(updatedImages);
+      // reset input
+      e.target.value = '';
+    } catch (error: any) {
+      setStatusMessage({
+        type: "error",
+        text: `Gagal upload slider: ${error.message}`
+      });
+      setIsUploadingSlider(false);
+    }
+  };
+
+  const handleRemoveSliderImage = async (indexToRemove: number) => {
+    const updatedImages = sliderImages.filter((_, idx) => idx !== indexToRemove);
+    await handleSaveSliderImages(updatedImages);
+  };
+
   // Safe background saver
+
   const handleSaveBackground = async (
     target: "welcome" | "menu",
     type: "default" | "image" | "video"
@@ -814,6 +945,71 @@ export default function PengaturanPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Slider Setting Area */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center">
+                <ImageIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">Pengaturan Slider Dashboard</h2>
+                <p className="text-sm text-gray-400">
+                  Unggah gambar yang akan ditampilkan pada slider coverflow di atas 7 Pilar. Disarankan aspek rasio 16:9.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6 relative z-10">
+              {/* Image Grid */}
+              {sliderImages.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {sliderImages.map((url, idx) => (
+                    <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border border-white/10 group/item">
+                      <img src={url} alt={`Slider ${idx}`} className="w-full h-full object-cover transition-transform duration-300 group-hover/item:scale-110" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                        <button
+                          onClick={() => handleRemoveSliderImage(idx)}
+                          className="bg-red-500/80 hover:bg-red-600 text-white p-2 rounded-full transform scale-90 group-hover/item:scale-100 transition-all"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload Input */}
+              <div>
+                <label className="block w-full cursor-pointer group/upload">
+                  <div className={`w-full py-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 transition-colors ${
+                    isUploadingSlider ? "border-gray-500 bg-gray-500/5" : "border-indigo-500/50 bg-indigo-500/5 group-hover/upload:bg-indigo-500/10 group-hover/upload:border-indigo-400"
+                  }`}>
+                    {isUploadingSlider ? (
+                      <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-indigo-400 group-hover/upload:scale-110 transition-transform" />
+                    )}
+                    <span className="text-sm font-medium text-gray-300">
+                      {isUploadingSlider ? "Sedang Mengunggah..." : "Pilih Gambar Baru (Bisa Lebih dari Satu)"}
+                    </span>
+                    <span className="text-xs text-gray-500">Mendukung format PNG, JPG, JPEG</span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleUploadNewSliderImage}
+                    disabled={isUploadingSlider}
+                  />
+                </label>
               </div>
             </div>
           </div>

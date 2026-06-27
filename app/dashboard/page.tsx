@@ -2,21 +2,70 @@
 
 import { useEffect, useState } from "react";
 import { chartData, pilarKpi } from "@/lib/data";
-import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCircle, Copy, Check, ChevronDown } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCircle, Copy, Check, ChevronDown, X } from "lucide-react";
 import Link from "next/link";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend } from "recharts";
-import { getDashboardSummary, PilarKPI } from "@/lib/services/api";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend, LabelList } from "recharts";
+import { getDashboardSummary, PilarKPI, getMonthlyProgressData } from "@/lib/services/api";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import "swiper/css/effect-coverflow";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
+import { EffectCoverflow, Pagination, Navigation, Autoplay } from "swiper/modules";
 
 export default function DashboardPage() {
   const [pilars, setPilars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState(new Date().getMonth() + 1);
+  const [sliderImages, setSliderImages] = useState<string[]>([]);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  
+  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+  const [selectedPilarChart, setSelectedPilarChart] = useState<string>('Semua Pilar');
+  const [monthlyChartData, setMonthlyChartData] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadMonthlyData() {
+      if (!isSupabaseConfigured()) {
+        const dummyData = Array.from({ length: 12 }).map((_, i) => ({
+          name: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'][i],
+          target: Number(((i + 1) * (100 / 12)).toFixed(1)),
+          realisasi: Math.floor(Math.random() * 50) + 10,
+        }));
+        setMonthlyChartData(dummyData);
+        return;
+      }
+      try {
+        const monthly = await getMonthlyProgressData(tahun, selectedPilarChart);
+        setMonthlyChartData(monthly);
+      } catch (error) {
+        console.error("Error loading monthly data:", error);
+      }
+    }
+    loadMonthlyData();
+  }, [tahun, selectedPilarChart]);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+      
+      // Fetch slider images
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          const { data } = await supabase.from("settings").select("logo_url").eq("id", 1).maybeSingle();
+          if (data && data.logo_url && data.logo_url.startsWith("{")) {
+            const parsed = JSON.parse(data.logo_url);
+            if (parsed.slider_images && Array.isArray(parsed.slider_images)) {
+              setSliderImages(parsed.slider_images);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to load slider images:", e);
+        }
+      }
+
       if (!isSupabaseConfigured()) {
         setPilars(pilarKpi.map(p => ({
           ...p,
@@ -119,6 +168,59 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Slider Area */}
+      {sliderImages && sliderImages.length > 0 && (
+        <div className="relative rounded-2xl overflow-hidden py-4 -mx-4 sm:mx-0 w-[calc(100%+2rem)] sm:w-full">
+          <Swiper
+            effect={"coverflow"}
+            grabCursor={true}
+            centeredSlides={true}
+            slidesPerView={"auto"}
+            coverflowEffect={{
+              rotate: 0,
+              stretch: 0,
+              depth: 100,
+              modifier: 2.5,
+              slideShadows: true,
+            }}
+            loop={true}
+            autoplay={{
+              delay: 5000,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: true,
+            }}
+            pagination={{ clickable: true, dynamicBullets: true }}
+            modules={[EffectCoverflow, Pagination, Autoplay]}
+            className="w-full h-full pb-8"
+            observer={true}
+            observeParents={true}
+          >
+            {/* Duplicate images if less than 5 to ensure smooth infinite loop */}
+            {(sliderImages.length < 5 
+              ? [...sliderImages, ...sliderImages, ...sliderImages, ...sliderImages].slice(0, Math.max(5, sliderImages.length * 2))
+              : sliderImages
+            ).map((src, index) => (
+              <SwiperSlide key={`${src}-${index}`} className="max-w-[85%] sm:max-w-[70%] md:max-w-[60%] lg:max-w-[50%]">
+                <div 
+                  className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl border border-white/10 cursor-pointer group"
+                  onClick={() => setLightboxImage(src)}
+                >
+                  <img
+                    src={src}
+                    alt={`Slide ${index + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  {/* Subtle vignette/overlay for depth */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 pointer-events-none" />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300">
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      )}
+
       {/* 7 Pilar Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {pilars.map((pilar, index) => (
@@ -169,7 +271,7 @@ export default function DashboardPage() {
                 <div className={`h-full rounded-full bg-gradient-to-r ${pilar.color}`} style={{ width: `${pilar.progress}%` }} />
               </div>
               
-              <Link href={`/dashboard/pilar/${pilar.id}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
+              <Link href={`/dashboard/pilar/${pilar.id}?tahun=${tahun}&bulan=${bulan}`} className="text-xs font-medium text-gray-400 hover:text-white flex items-center gap-1 transition-colors w-max relative z-10">
                 Lihat Detail <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
@@ -187,80 +289,140 @@ export default function DashboardPage() {
           GRAFIK CAPAIAN KPI
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="p-6 rounded-2xl glassmorphism lg:col-span-2">
-            <div className="mb-6 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-200">Perkembangan KPI (Tahun Berjalan)</h3>
+        <div className="p-6 rounded-2xl glassmorphism">
+          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-gray-200 text-lg">Tren Capaian Bulanan KPI</h3>
+              <p className="text-sm text-gray-400 mt-1">Capaian persentase setiap bulan untuk tahun {tahun}</p>
             </div>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRealisasi" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: '8px' }}
-                    itemStyle={{ color: '#E2E8F0' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
-                  <Area type="monotone" dataKey="realisasi" name="Realisasi" stroke="#8B5CF6" strokeWidth={3} fillOpacity={1} fill="url(#colorRealisasi)" />
-                  <Area type="monotone" dataKey="target" name="Target" stroke="#64748B" strokeDasharray="5 5" fillOpacity={0} />
-                </AreaChart>
-              </ResponsiveContainer>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <select 
+                value={selectedPilarChart}
+                onChange={(e) => setSelectedPilarChart(e.target.value)}
+                className="bg-[#0f172a] text-white border border-white/10 rounded-lg px-4 py-2 focus:outline-none focus:border-primary-cyan text-sm w-full sm:w-auto"
+              >
+                <option value="Semua Pilar">Semua Pilar</option>
+                <option value="PILAR 1">PILAR 1</option>
+                <option value="PILAR 2">PILAR 2</option>
+                <option value="PILAR 3">PILAR 3</option>
+                <option value="PILAR 4">PILAR 4</option>
+                <option value="PILAR 5">PILAR 5</option>
+                <option value="PILAR 6">PILAR 6</option>
+                <option value="PILAR 7">PILAR 7</option>
+              </select>
+
+              <div className="flex bg-[#0f172a] rounded-lg p-1 border border-white/10 w-full sm:w-auto">
+                <button
+                  onClick={() => setChartType('bar')}
+                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${chartType === 'bar' ? 'bg-primary-cyan/20 text-primary-cyan' : 'text-gray-400 hover:text-white'}`}
+                >
+                  Grafik Batang
+                </button>
+                <button
+                  onClick={() => setChartType('line')}
+                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${chartType === 'line' ? 'bg-primary-purple/20 text-primary-purple' : 'text-gray-400 hover:text-white'}`}
+                >
+                  Grafik Garis
+                </button>
+              </div>
             </div>
           </div>
-          
-          <div className="p-6 rounded-2xl glassmorphism">
-             <div className="mb-6">
-              <h3 className="font-semibold text-gray-200">Target vs Realisasi Bulanan</h3>
-            </div>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === 'bar' ? (
+                <BarChart data={monthlyChartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip 
                     cursor={{fill: '#1E293B', opacity: 0.4}}
-                    contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
+                    formatter={(value: number) => [`${value}%`, '']}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
-                  <Bar dataKey="target" name="Target" fill="#334155" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="realisasi" name="Realisasi" fill="#06B6D4" radius={[4, 4, 0, 0]} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                  
+                  {selectedPilarChart === 'Semua Pilar' ? (
+                    <>
+                      <Bar dataKey="target" name="Target (100%)" fill="#334155" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_1" name="Pilar 1" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_2" name="Pilar 2" fill="#f97316" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_3" name="Pilar 3" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_4" name="Pilar 4" fill="#84cc16" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_5" name="Pilar 5" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_6" name="Pilar 6" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="realisasi_PILAR_7" name="Pilar 7" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    </>
+                  ) : (
+                    <>
+                      <Bar dataKey="target" name="Target" fill="#334155" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} />
+                      </Bar>
+                      <Bar dataKey="realisasi" name="Realisasi" fill="#06B6D4" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="realisasi" position="top" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} />
+                      </Bar>
+                    </>
+                  )}
                 </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl glassmorphism">
-             <div className="mb-6">
-              <h3 className="font-semibold text-gray-200">Trend Capaian Historis</h3>
-            </div>
-            <div className="h-[250px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              ) : (
+                <LineChart data={monthlyChartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #334155', borderRadius: '8px' }}
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
+                    formatter={(value: number) => [`${value}%`, '']}
                   />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
-                  <Line type="monotone" dataKey="realisasi" name="Capaian %" stroke="#F59E0B" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+                  
+                  {selectedPilarChart === 'Semua Pilar' ? (
+                    <>
+                      <Line type="monotone" dataKey="target" name="Target (100%)" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_1" name="Pilar 1" stroke="#ef4444" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_2" name="Pilar 2" stroke="#f97316" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_3" name="Pilar 3" stroke="#f59e0b" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_4" name="Pilar 4" stroke="#84cc16" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_5" name="Pilar 5" stroke="#10b981" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_6" name="Pilar 6" stroke="#06b6d4" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                      <Line type="monotone" dataKey="realisasi_PILAR_7" name="Pilar 7" stroke="#8b5cf6" strokeWidth={2} dot={{r: 3, fill: '#0f172a', strokeWidth: 2}} />
+                    </>
+                  ) : (
+                    <>
+                      <Line type="monotone" dataKey="target" name="Target" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={{r: 4, fill: '#0f172a', strokeWidth: 2}}>
+                        <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
+                      </Line>
+                      <Line type="monotone" dataKey="realisasi" name="Realisasi" stroke="#06B6D4" strokeWidth={3} dot={{r: 5, fill: '#0f172a', strokeWidth: 2}} activeDot={{r: 7}}>
+                        <LabelList dataKey="realisasi" position="bottom" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
+                      </Line>
+                    </>
+                  )}
                 </LineChart>
-              </ResponsiveContainer>
-            </div>
+              )}
+            </ResponsiveContainer>
           </div>
-
         </div>
       </div>
       
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer" onClick={() => setLightboxImage(null)}></div>
+          <div className="relative z-10 max-w-5xl w-full max-h-[90vh] flex flex-col items-center">
+            <button 
+              className="absolute -top-12 right-0 p-2 text-white hover:text-red-400 bg-black/50 hover:bg-black/80 rounded-full transition-colors z-20" 
+              onClick={() => setLightboxImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={lightboxImage}
+              alt="Fullscreen Slider"
+              className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-white/10"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

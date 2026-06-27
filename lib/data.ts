@@ -9,7 +9,7 @@ export const pilarKpi = [
 ];
 
 export const indicators = [
-  { id: 1, pilarId: 1, name: "Jumlah PPPK/PWTHL yang dapat ditampung", satuan: "Orang", target: 5, realisasi: 0, capaian: 0 },
+  { id: 1, pilarId: 1, name: "Jumlah PPPKPW/THL yang dapat ditampung", satuan: "Orang", target: 5, realisasi: 0, capaian: 0 },
   { id: 2, pilarId: 2, name: "Persentase Penyelesaian LHP BPK", satuan: "Persen", target: 100, realisasi: 0, capaian: 0 },
   { id: 3, pilarId: 3, name: "Jumlah aset yang dimanfaatkan - a. Pemanfaatan lahan parkir", satuan: "Hektar", target: 0.1, realisasi: 0, capaian: 0 },
   { id: 4, pilarId: 3, name: "Jumlah aset yang dimanfaatkan - b. Bangunan yang disewakan", satuan: "Unit", target: 1, realisasi: 0, capaian: 0 },

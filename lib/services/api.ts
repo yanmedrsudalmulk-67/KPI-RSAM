@@ -52,13 +52,19 @@ export async function getIndicatorsByPilar(pilarId: number) {
     .order('id', { ascending: true });
   if (error) throw error;
 
-  return (data || []).map(ind => ({
-    ...ind,
-    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
-  })) as IndikatorKPI[];
+  return (data || []).map(ind => {
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+    return {
+      ...ind,
+      nama_indikator,
+    };
+  }) as IndikatorKPI[];
 }
 
-export async function getPilarDetail(pilarId: number) {
+export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: number) {
   if (!isSupabaseConfigured()) return { pilar: null, indicators: [] };
   
   const foundPilar = pilarKpi.find((p) => p.id === pilarId);
@@ -72,34 +78,62 @@ export async function getPilarDetail(pilarId: number) {
     .order('id', { ascending: true });
   if (err2) throw err2;
 
-  // Process indicators to extract latest capaian (just using the highest id for now or latest month/year)
+  const targetYear = tahun || new Date().getFullYear();
+  const limitMonth = bulan || 12;
+
+  // Process indicators to extract latest capaian for the target year
   const processed = (indicators || []).map(ind => {
     let latestCapaian = null;
     let totalRealisasi = 0;
-    if (ind.capaian_kpi && ind.capaian_kpi.length > 0) {
-      // Sort by tahun desc, bulan desc
-      const sorted = ind.capaian_kpi.sort((a: any, b: any) => {
-        if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-        return b.bulan - a.bulan;
-      });
+    let totalTarget = 0;
+    
+    // Filter capaian_kpi by targetYear and up to limitMonth
+    const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear && c.bulan <= limitMonth);
+
+    if (filteredCapaianKpi.length > 0) {
+      // Sort by bulan desc
+      const sorted = [...filteredCapaianKpi].sort((a: any, b: any) => b.bulan - a.bulan);
       latestCapaian = sorted[0];
-      totalRealisasi = ind.capaian_kpi.reduce((sum: number, c: any) => sum + Number(c.realisasi), 0);
     }
+
+    // Calculate accumulated target and realisasi for inputted months only
+    filteredCapaianKpi.forEach((cap: any) => {
+      let targetBulanan = cap.target_bulanan !== undefined && cap.target_bulanan !== null ? Number(cap.target_bulanan) : 0;
+      const targetTahunan = Number(ind.target_tahunan || 0);
+      if (targetBulanan <= 0 && targetTahunan > 0) {
+        targetBulanan = targetTahunan / 12;
+      }
+      totalTarget += targetBulanan;
+      totalRealisasi += Number(cap.realisasi || 0);
+    });
 
     let progress = 0;
     let status = "Belum tercapai";
-    if (ind.target_tahunan > 0) {
-       progress = (totalRealisasi / ind.target_tahunan) * 100;
+    if (totalTarget > 0) {
+       progress = (totalRealisasi / totalTarget) * 100;
+       if (progress > 100) progress = 100; // Cap at 100% per indicator
        if (progress >= 100) status = "Tercapai";
        else if (progress >= 80) status = "Perlu perhatian";
+    } else {
+       const targetTahunan = Number(ind.target_tahunan || 0);
+       if (targetTahunan > 0) {
+         progress = 0;
+         status = "Belum tercapai";
+       }
+    }
+
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
     }
 
     return {
       ...ind,
-      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+      nama_indikator,
+      capaian_kpi: ind.capaian_kpi, // Keep all-years list for table reference
       latestCapaian,
       totalRealisasi,
-      progress,
+      progress: Number(progress.toFixed(1)),
       status
     };
   });
@@ -117,10 +151,16 @@ export async function getIndicators() {
     .order('id', { ascending: true });
   if (error) throw error;
   
-  return (data || []).map(ind => ({
-    ...ind,
-    nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
-  }));
+  return (data || []).map(ind => {
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+    return {
+      ...ind,
+      nama_indikator
+    };
+  });
 }
 
 export async function getDashboardSummary(tahun: number, bulan: number) {
@@ -159,17 +199,37 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
     let countIndikatorAdaTarget = 0;
 
     pilarIndicators.forEach(ind => {
-      // Calculate realisasi from capaians for the selected year and up to the selected month
-      let totalRealisasi = 0;
-      if (ind.capaian_kpi) {
-        const filteredCapaians = ind.capaian_kpi.filter((c: any) => c.tahun === tahun && c.bulan <= bulan);
-        totalRealisasi = filteredCapaians.reduce((sum: number, c: any) => sum + Number(c.realisasi), 0);
-      }
+      const filteredCapaians = (ind.capaian_kpi || []).filter((c: any) => c.tahun === tahun && c.bulan <= bulan);
+      
+      let accumulatedTarget = 0;
+      let accumulatedRealisasi = 0;
+
+      filteredCapaians.forEach((cap: any) => {
+        let targetBulanan = cap.target_bulanan !== undefined && cap.target_bulanan !== null ? Number(cap.target_bulanan) : 0;
+        const targetTahunan = Number(ind.target_tahunan || 0);
+        if (targetBulanan <= 0 && targetTahunan > 0) {
+          targetBulanan = targetTahunan / 12;
+        }
+        accumulatedTarget += targetBulanan;
+        accumulatedRealisasi += Number(cap.realisasi || 0);
+      });
 
       let pct = 0;
-      if (ind.target_tahunan && Number(ind.target_tahunan) > 0) {
-        pct = (totalRealisasi / Number(ind.target_tahunan)) * 100;
-        if (pct > 100) pct = 100; // Cap at 100% per indicator (optional)
+      let hasTarget = false;
+
+      if (accumulatedTarget > 0) {
+        pct = (accumulatedRealisasi / accumulatedTarget) * 100;
+        hasTarget = true;
+      } else {
+        const targetTahunan = Number(ind.target_tahunan || 0);
+        if (targetTahunan > 0) {
+          pct = 0;
+          hasTarget = true;
+        }
+      }
+
+      if (hasTarget) {
+        if (pct > 100) pct = 100; // Cap at 100% per indicator
         totalPersentase += pct;
         countIndikatorAdaTarget++;
       }
@@ -194,6 +254,104 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
   });
 
   return result;
+}
+
+export async function getMonthlyProgressData(tahun: number, pilarName: string) {
+  if (!isSupabaseConfigured()) {
+    return Array.from({ length: 12 }).map((_, i) => ({
+      name: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'][i],
+      target: 100,
+      realisasi: Math.floor(Math.random() * 50) + 10,
+    }));
+  }
+
+  const { data: indicators, error: errInd } = await supabase!
+    .from('indikator_kpi')
+    .select('*, capaian_kpi(*)');
+
+  if (errInd) throw errInd;
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+  
+  return months.map((monthName, index) => {
+    const bulan = index + 1;
+    
+    if (pilarName === 'Semua Pilar') {
+      const pilarNames = ['PILAR 1', 'PILAR 2', 'PILAR 3', 'PILAR 4', 'PILAR 5', 'PILAR 6', 'PILAR 7'];
+      const result: any = { name: monthName, target: 100 };
+      
+      pilarNames.forEach(pilar => {
+        let totalPct = 0;
+        let count = 0;
+        
+        (indicators || []).filter(ind => ind.pilar === pilar).forEach(ind => {
+          let realisasi = 0;
+          let targetBulanan = 0;
+          let hasCapaian = false;
+
+          if (ind.capaian_kpi) {
+            const matched = ind.capaian_kpi.find((c: any) => c.tahun === tahun && c.bulan === bulan);
+            if (matched) {
+              realisasi = Number(matched.realisasi || 0);
+              targetBulanan = Number(matched.target_bulanan || 0);
+              hasCapaian = true;
+            }
+          }
+          
+          const targetTahunan = Number(ind.target_tahunan || 0);
+          if (targetBulanan <= 0 && targetTahunan > 0) {
+            targetBulanan = targetTahunan / 12;
+          }
+
+          if (targetBulanan > 0) {
+            let pct = (realisasi / targetBulanan) * 100;
+            if (pct > 100) pct = 100; // Cap at 100%
+            totalPct += pct;
+            count++;
+          }
+        });
+        
+        result[`realisasi_${pilar.replace(' ', '_')}`] = count > 0 ? Number((totalPct / count).toFixed(1)) : 0;
+      });
+      return result;
+    } else {
+      let totalPct = 0;
+      let count = 0;
+      
+      (indicators || []).filter(ind => ind.pilar === pilarName).forEach(ind => {
+        let realisasi = 0;
+        let targetBulanan = 0;
+        let hasCapaian = false;
+
+        if (ind.capaian_kpi) {
+          const matched = ind.capaian_kpi.find((c: any) => c.tahun === tahun && c.bulan === bulan);
+          if (matched) {
+            realisasi = Number(matched.realisasi || 0);
+            targetBulanan = Number(matched.target_bulanan || 0);
+            hasCapaian = true;
+          }
+        }
+        
+        const targetTahunan = Number(ind.target_tahunan || 0);
+        if (targetBulanan <= 0 && targetTahunan > 0) {
+          targetBulanan = targetTahunan / 12;
+        }
+
+        if (targetBulanan > 0) {
+          let pct = (realisasi / targetBulanan) * 100;
+          if (pct > 100) pct = 100; // Cap at 100%
+          totalPct += pct;
+          count++;
+        }
+      });
+      
+      return {
+        name: monthName,
+        target: 100,
+        realisasi: count > 0 ? Number((totalPct / count).toFixed(1)) : 0,
+      };
+    }
+  });
 }
 
 export async function getCapaianSummary() {
@@ -264,10 +422,15 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
     const indCapaians = capData.filter(c => c.indikator_id === ind.id);
     const pilarName = ind.pilar || '';
 
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+
     return {
       ...ind,
       nama_pilar: pilarName,
-      nama_indikator: ind.uraian_kpi || ind.nama_indikator || ind.name,
+      nama_indikator,
       target_tahunan: ind.target_tahunan !== undefined && ind.target_tahunan !== null ? ind.target_tahunan : (ind.target || 0),
       capaians: indCapaians
     };
