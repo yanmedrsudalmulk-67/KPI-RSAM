@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { pilarKpi } from "@/lib/data";
-import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCircle, Copy, Check, ChevronDown, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ArrowDownRight, Activity, Database, AlertCircle, Copy, Check, ChevronDown, X, BarChart2, LineChart as LineChartIcon } from "lucide-react";
 import Link from "next/link";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, BarChart, Bar, Legend, LabelList, Cell } from "recharts";
 import { getDashboardSummary, PilarKPI } from "@/lib/services/api";
@@ -13,21 +13,6 @@ import "swiper/css/effect-coverflow";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 import { EffectCoverflow, Pagination, Navigation, Autoplay } from "swiper/modules";
-
-const renderCustomDot = (props: any) => {
-  const { cx, cy, payload } = props;
-  return (
-    <circle 
-      cx={cx} 
-      cy={cy} 
-      r={5} 
-      fill={payload.color || '#06B6D4'} 
-      stroke="#0f172a" 
-      strokeWidth={2} 
-      style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }} 
-    />
-  );
-};
 
 export default function DashboardPage() {
   const [pilars, setPilars] = useState<any[]>([]);
@@ -134,6 +119,9 @@ export default function DashboardPage() {
       color: barColor
     };
   });
+  
+  const selectedMonthName = MONTH_OPTIONS.find(m => m.value === bulan)?.label.toUpperCase();
+  const chartTitle = `PERIODE ${bulan === 0 ? "TAHUNAN" : selectedMonthName} ${tahun}`;
 
   return (
     <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -320,20 +308,26 @@ export default function DashboardPage() {
         </h2>
         
         <div className="p-6 rounded-2xl glassmorphism">
-          <div className="mb-8 flex flex-col sm:flex-row items-center justify-end gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="flex bg-[#0f172a] rounded-lg p-1 border border-white/10 w-full sm:w-auto shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+          <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex-1" />
+            <h3 className="font-poppins font-bold text-gray-200 text-base md:text-lg text-center tracking-wide flex-1">
+              {chartTitle}
+            </h3>
+            <div className="flex flex-col sm:flex-row items-center gap-4 flex-1 justify-end">
+              <div className="flex bg-[#0f172a] rounded-lg p-1 border border-white/10 w-auto shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                 <button
                   onClick={() => setChartType('bar')}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${chartType === 'bar' ? 'bg-primary-cyan/20 text-primary-cyan' : 'text-gray-400 hover:text-white'}`}
+                  className={`p-2 rounded-md transition-colors ${chartType === 'bar' ? 'bg-primary-cyan/20 text-primary-cyan' : 'text-gray-400 hover:text-white'}`}
+                  title="Grafik Batang"
                 >
-                  Grafik Batang
+                  <BarChart2 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setChartType('line')}
-                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${chartType === 'line' ? 'bg-primary-purple/20 text-primary-purple' : 'text-gray-400 hover:text-white'}`}
+                  className={`p-2 rounded-md transition-colors ${chartType === 'line' ? 'bg-primary-purple/20 text-primary-purple' : 'text-gray-400 hover:text-white'}`}
+                  title="Grafik Garis"
                 >
-                  Grafik Garis
+                  <LineChartIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -342,9 +336,9 @@ export default function DashboardPage() {
           <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'bar' ? (
-                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickMargin={20} />
                   <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     cursor={{fill: '#1E293B', opacity: 0.4}}
@@ -364,9 +358,9 @@ export default function DashboardPage() {
                   </Bar>
                 </BarChart>
               ) : (
-                <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickMargin={20} />
                   <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
@@ -377,8 +371,8 @@ export default function DashboardPage() {
                   <Line type="monotone" dataKey="target" name="Target (100%)" stroke="#64748B" strokeWidth={2} strokeDasharray="5 5" dot={{r: 4, fill: '#0f172a', strokeWidth: 2}}>
                     <LabelList dataKey="target" position="top" fill="#94A3B8" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
                   </Line>
-                  <Line type="monotone" dataKey="progress" name="Capaian" stroke="#06B6D4" strokeWidth={3} dot={renderCustomDot} activeDot={{r: 7, fill: '#06B6D4', strokeWidth: 0}} style={{ filter: 'drop-shadow(0px 8px 12px rgba(6,182,212,0.4))' }}>
-                    <LabelList dataKey="progress" position="bottom" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} offset={10} />
+                  <Line type="monotone" dataKey="progress" name="Capaian" stroke="#06B6D4" strokeWidth={3} dot={{r: 5, fill: '#06B6D4', strokeWidth: 2, stroke: '#0f172a'}} activeDot={{r: 7, fill: '#06B6D4', strokeWidth: 0}} style={{ filter: 'drop-shadow(0px 8px 12px rgba(6,182,212,0.4))' }}>
+                    <LabelList dataKey="progress" position="bottom" fill="#22D3EE" fontSize={11} formatter={(val: number) => `${val}%`} offset={15} />
                   </Line>
                 </LineChart>
               )}

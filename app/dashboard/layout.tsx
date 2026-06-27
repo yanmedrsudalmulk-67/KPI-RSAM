@@ -86,13 +86,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             isCollapsed={isCollapsed}
           />
           <NavItem 
-            href="/dashboard/master" 
-            icon={<Database />} 
-            label="Master Data" 
-            active={pathname === "/dashboard/master"} 
-            isCollapsed={isCollapsed}
-          />
-          <NavItem 
             href="/dashboard/pengaturan" 
             icon={<Settings />} 
             label="Pengaturan" 
@@ -192,7 +185,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="space-y-3 px-1">
-              <MobileMenuItem href="/dashboard/master" icon={<Database />} label="Master Data" active={pathname === "/dashboard/master"} onClick={() => setIsMobileMenuOpen(false)} />
               <MobileMenuItem href="/dashboard/pengaturan" icon={<Settings />} label="Pengaturan" active={pathname === "/dashboard/pengaturan"} onClick={() => setIsMobileMenuOpen(false)} />
             </div>
 
