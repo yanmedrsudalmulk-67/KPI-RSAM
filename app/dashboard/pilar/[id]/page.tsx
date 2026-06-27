@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useMemo, useRef } from "react";
 import { pilarKpi, indicators as indKpi } from "@/lib/data";
+import { motion } from "motion/react";
 import {
   ArrowLeft,
   BarChart2,
@@ -800,60 +801,81 @@ export default function PilarDetail({
             <p className="text-sm text-gray-400 mt-1">Akses cepat ke platform media sosial resmi Rumah Sakit.</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-6">
-            <svg width="0" height="0" className="absolute">
-              <linearGradient id="ig-gradient" x1="100%" y1="100%" x2="0%" y2="0%">
-                <stop stopColor="#f09433" offset="0%" />
-                <stop stopColor="#dc2743" offset="50%" />
-                <stop stopColor="#bc1888" offset="100%" />
-              </linearGradient>
-            </svg>
-
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-5">
             {/* Facebook */}
-            <a 
+            <motion.a 
               href={socialLinks.facebook || "#"} 
               target={socialLinks.facebook ? "_blank" : undefined}
               rel="noopener noreferrer"
-              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.facebook ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-[#1877F2]/10 hover:border-[#1877F2]/50 hover:shadow-[0_10px_30px_rgba(24,119,242,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
-              title={socialLinks.facebook ? "Facebook Resmi" : "Belum dikonfigurasi"}
+              whileHover={socialLinks.facebook ? { scale: 1.08, y: -4 } : {}}
+              whileTap={socialLinks.facebook ? { scale: 0.95 } : {}}
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+                socialLinks.facebook 
+                  ? 'bg-gradient-to-br from-[#1877F2] to-[#0D5BD7] shadow-[0_10px_20px_rgba(24,119,242,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(24,119,242,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
+              }`}
+              title={socialLinks.facebook ? "Facebook Resmi" : "Link belum dikonfigurasi"}
             >
-              <Facebook className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" fill="#1877F2" stroke="white" strokeWidth={1} />
-            </a>
+              <Facebook className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={1.5} fill="currentColor" />
+            </motion.a>
 
             {/* Instagram */}
-            <a 
+            <motion.a 
               href={socialLinks.instagram || "#"} 
               target={socialLinks.instagram ? "_blank" : undefined}
               rel="noopener noreferrer"
-              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.instagram ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-pink-600/10 hover:border-[#dc2743]/50 hover:shadow-[0_10px_30px_rgba(220,39,67,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
-              title={socialLinks.instagram ? "Instagram Resmi" : "Belum dikonfigurasi"}
+              whileHover={socialLinks.instagram ? { scale: 1.08, y: -4 } : {}}
+              whileTap={socialLinks.instagram ? { scale: 0.95 } : {}}
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+                socialLinks.instagram 
+                  ? 'bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#515BD4] shadow-[0_10px_20px_rgba(221,42,123,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(221,42,123,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
+              }`}
+              title={socialLinks.instagram ? "Instagram Resmi" : "Link belum dikonfigurasi"}
             >
-              <Instagram className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" stroke="url(#ig-gradient)" strokeWidth={2} />
-            </a>
-
-            {/* TikTok */}
-            <a 
-              href={socialLinks.tiktok || "#"} 
-              target={socialLinks.tiktok ? "_blank" : undefined}
-              rel="noopener noreferrer"
-              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.tiktok ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-white/10 hover:border-white/30 hover:shadow-[0_10px_30px_rgba(255,255,255,0.25)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
-              title={socialLinks.tiktok ? "TikTok Resmi" : "Belum dikonfigurasi"}
-            >
-              <svg viewBox="0 0 448 512" className="w-12 h-12 transition-transform duration-300 group-hover:scale-105" fill="#FFFFFF">
-                <path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25V349.38A162.55 162.55 0 1 1 185 188.31V278.2a74.62 74.62 0 1 0 52.23 71.18V0l88 0a121.18 121.18 0 0 0 1.86 22.17h0A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/>
-              </svg>
-            </a>
+              <Instagram className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={2} />
+            </motion.a>
 
             {/* Website */}
-            <a 
+            <motion.a 
               href={socialLinks.website || "#"} 
               target={socialLinks.website ? "_blank" : undefined}
               rel="noopener noreferrer"
-              className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.website ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-[#10b981]/10 hover:border-[#10b981]/50 hover:shadow-[0_10px_30px_rgba(16,185,129,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
-              title={socialLinks.website ? "Website Resmi" : "Belum dikonfigurasi"}
+              whileHover={socialLinks.website ? { scale: 1.08, y: -4 } : {}}
+              whileTap={socialLinks.website ? { scale: 0.95 } : {}}
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+                socialLinks.website 
+                  ? 'bg-gradient-to-br from-[#10B981] to-[#06B6D4] shadow-[0_10px_20px_rgba(16,185,129,0.3),inset_0_2px_4px_rgba(255,255,255,0.4),inset_0_-2px_4px_rgba(0,0,0,0.2)] hover:shadow-[0_15px_30px_rgba(16,185,129,0.5),inset_0_2px_4px_rgba(255,255,255,0.5),inset_0_-2px_4px_rgba(0,0,0,0.3)] cursor-pointer' 
+                  : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
+              }`}
+              title={socialLinks.website ? "Website Resmi" : "Link belum dikonfigurasi"}
             >
-              <Globe className="w-14 h-14 text-[#10B981] transition-transform duration-300 group-hover:scale-105" strokeWidth={1.5} />
-            </a>
+              <Globe className="w-7 h-7 md:w-8 md:h-8 text-white drop-shadow-md" strokeWidth={2} />
+            </motion.a>
+
+            {/* TikTok */}
+            <motion.a 
+              href={socialLinks.tiktok || "#"} 
+              target={socialLinks.tiktok ? "_blank" : undefined}
+              rel="noopener noreferrer"
+              whileHover={socialLinks.tiktok ? { scale: 1.08, y: -4 } : {}}
+              whileTap={socialLinks.tiktok ? { scale: 0.95 } : {}}
+              className={`group relative flex items-center justify-center w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-[20px] transition-all duration-300 ${
+                socialLinks.tiktok 
+                  ? 'bg-gradient-to-br from-[#111111] to-[#000000] shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_0_2px_4px_rgba(255,255,255,0.2),inset_0_-2px_4px_rgba(0,0,0,0.4)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.7),inset_0_2px_4px_rgba(255,255,255,0.3),inset_0_-2px_4px_rgba(0,0,0,0.5)] cursor-pointer' 
+                  : 'bg-white/5 border border-white/10 opacity-40 cursor-not-allowed grayscale'
+              }`}
+              title={socialLinks.tiktok ? "TikTok Resmi" : "Link belum dikonfigurasi"}
+            >
+              <svg 
+                viewBox="0 0 448 512" 
+                className="w-6 h-6 md:w-7 md:h-7" 
+                fill="#FFFFFF"
+                style={{ filter: "drop-shadow(2px 2px 0px #ff0050) drop-shadow(-2px -2px 0px #00f2fe)" }}
+              >
+                <path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25V349.38A162.55 162.55 0 1 1 185 188.31V278.2a74.62 74.62 0 1 0 52.23 71.18V0l88 0a121.18 121.18 0 0 0 1.86 22.17h0A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14Z"/>
+              </svg>
+            </motion.a>
           </div>
         </div>
       )}
