@@ -16,7 +16,15 @@ const statusData = [
 ];
 
 export default function GrafikPage() {
-  const [pilars, setPilars] = useState<any[]>([]);
+  const [pilars, setPilars] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("grafik_pilars_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
 
   useEffect(() => {
     async function loadData() {
@@ -30,16 +38,19 @@ export default function GrafikPage() {
             progress: Math.floor(Math.random() * 50) + 50 // placeholder progress
           }));
           setPilars(graphPilars);
+          if (typeof window !== "undefined") localStorage.setItem("grafik_pilars_cache", JSON.stringify(graphPilars));
         } catch(e) {
           isMock = true;
         }
       } 
       
       if (isMock) {
-        setPilars(pilarKpi.map(p => ({
+        const mockData = pilarKpi.map(p => ({
             ...p,
             nama_pilar: p.name
-        })));
+        }));
+        setPilars(mockData);
+        if (typeof window !== "undefined") localStorage.setItem("grafik_pilars_cache", JSON.stringify(mockData));
       }
     }
     loadData();

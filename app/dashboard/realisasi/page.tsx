@@ -70,7 +70,15 @@ export default function LaporanRealisasiPage() {
   const [bulan, setBulan] = useState<number>(new Date().getMonth() + 1);
   const [selectedPilarFilter, setSelectedPilarFilter] =
     useState<string>("Semua Pilar");
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("realisasi_data_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(false);
 
   const [selectedIndikator, setSelectedIndikator] = useState<any>(null);
@@ -115,8 +123,10 @@ export default function LaporanRealisasiPage() {
           capaians: [],
         }));
         setData(mockData);
+        if (typeof window !== "undefined") localStorage.setItem("realisasi_data_cache", JSON.stringify(mockData));
       } else {
         setData(fetchedData);
+        if (typeof window !== "undefined") localStorage.setItem("realisasi_data_cache", JSON.stringify(fetchedData));
       }
     } catch (error) {
       console.error("Error loading data", error);
@@ -429,7 +439,7 @@ export default function LaporanRealisasiPage() {
       )}
 
       {/* CARDS LISTING */}
-      {loading ? (
+      {loading && data.length === 0 ? (
         <div className="py-20 flex flex-col items-center justify-center gap-4">
           <div className="w-10 h-10 flex items-center justify-center rounded-full border-4 border-primary-purple opacity-20 border-t-primary-purple animate-spin" />
           <span className="text-gray-400 font-medium">Memuat data KPI...</span>

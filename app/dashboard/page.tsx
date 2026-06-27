@@ -15,11 +15,34 @@ import "swiper/css/navigation";
 import { EffectCoverflow, Pagination, Navigation, Autoplay } from "swiper/modules";
 
 export default function DashboardPage() {
-  const [pilars, setPilars] = useState<any[]>([]);
+  const [pilars, setPilars] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("dashboard_pilars_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return pilarKpi.map(p => ({
+      ...p,
+      nama_pilar: p.name,
+      progress: 0,
+      status: 'Belum tercapai',
+      count: 0
+    }));
+  });
+  
+  const [sliderImages, setSliderImages] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("dashboard_slider_cache");
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [tahun, setTahun] = useState(new Date().getFullYear());
   const [bulan, setBulan] = useState(new Date().getMonth() + 1);
-  const [sliderImages, setSliderImages] = useState<string[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
@@ -36,6 +59,9 @@ export default function DashboardPage() {
             const parsed = JSON.parse(data.logo_url);
             if (parsed.slider_images && Array.isArray(parsed.slider_images)) {
               setSliderImages(parsed.slider_images);
+              if (typeof window !== "undefined") {
+                localStorage.setItem("dashboard_slider_cache", JSON.stringify(parsed.slider_images));
+              }
             }
           }
         } catch (e) {
@@ -58,6 +84,9 @@ export default function DashboardPage() {
         const data = await getDashboardSummary(tahun, bulan);
         if (data && data.length > 0) {
           setPilars(data);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("dashboard_pilars_cache", JSON.stringify(data));
+          }
         } else {
           // If Supabase returns empty (table exists but no seed data)
           setPilars(pilarKpi.map(p => ({
@@ -180,11 +209,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {loading && isSupabaseConfigured() && (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 rounded-full border-4 border-primary-purple opacity-20 border-t-primary-purple animate-spin" />
-        </div>
-      )}
+      {/* loading state removed for faster perceived performance */}
 
       {/* Slider Area */}
       {sliderImages && sliderImages.length > 0 && (

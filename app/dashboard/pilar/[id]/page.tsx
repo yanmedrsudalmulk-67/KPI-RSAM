@@ -61,8 +61,24 @@ export default function PilarDetail({
 }) {
   const resolvedParams = use(params);
   const pilarId = parseInt(resolvedParams.id);
-  const [pilar, setPilar] = useState<any>(null);
-  const [indicators, setIndicators] = useState<any[]>([]);
+  const [pilar, setPilar] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(`pilar_detail_${pilarId}_cache`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return null;
+  });
+  const [indicators, setIndicators] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem(`pilar_indicators_${pilarId}_cache`);
+      if (cached) {
+        try { return JSON.parse(cached); } catch(e) {}
+      }
+    }
+    return [];
+  });
   const [searchTerm] = useState("");
   const [lightboxDoc, setLightboxDoc] = useState<{id: string, month: string, url: string} | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,6 +157,10 @@ export default function PilarDetail({
           } else {
             setPilar(p);
             setIndicators(ind);
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`pilar_detail_${pilarId}_cache`, JSON.stringify(p));
+              localStorage.setItem(`pilar_indicators_${pilarId}_cache`, JSON.stringify(ind));
+            }
           }
         } catch (e: any) {
           if (e?.code !== "PGRST205") {
@@ -153,10 +173,10 @@ export default function PilarDetail({
       if (isMock) {
         const foundPilar = pilarKpi.find((p) => p.id === pilarId);
         if (foundPilar) {
-          setPilar({ ...foundPilar, nama_pilar: foundPilar.name });
+          const mockPilar = { ...foundPilar, nama_pilar: foundPilar.name };
+          setPilar(mockPilar);
           const currYear = parseInt(selectedGraphTahun) || new Date().getFullYear();
-          setIndicators(
-            indKpi
+          const mockInd = indKpi
               .filter((i) => i.pilarId === pilarId)
               .map((i) => ({
                 ...i,
@@ -199,8 +219,12 @@ export default function PilarDetail({
                     realisasi: i.target ? (i.target / 12) * 1.1 : 0,
                   },
                 ],
-              })),
-          );
+              }));
+          setIndicators(mockInd);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`pilar_detail_${pilarId}_cache`, JSON.stringify(mockPilar));
+            localStorage.setItem(`pilar_indicators_${pilarId}_cache`, JSON.stringify(mockInd));
+          }
         }
       }
       setLoading(false);
@@ -309,7 +333,7 @@ export default function PilarDetail({
     return docs;
   }, [chartData]);
 
-  if (loading) {
+  if (loading && !pilar) {
     return (
       <div className="flex justify-center py-12">
         <div className="w-8 h-8 rounded-full border-4 border-primary-purple opacity-20 border-t-primary-purple animate-spin" />
@@ -793,7 +817,7 @@ export default function PilarDetail({
               className={`group relative flex items-center justify-center w-20 h-20 rounded-2xl backdrop-blur-md transition-all duration-300 ${socialLinks.facebook ? 'bg-white/5 border border-white/10 hover:-translate-y-1.5 hover:bg-[#1877F2]/10 hover:border-[#1877F2]/50 hover:shadow-[0_10px_30px_rgba(24,119,242,0.4)] cursor-pointer' : 'bg-white/2 border border-white/5 opacity-30 cursor-not-allowed grayscale'}`}
               title={socialLinks.facebook ? "Facebook Resmi" : "Belum dikonfigurasi"}
             >
-              <Facebook className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" fill="#1877F2" stroke="#1877F2" />
+              <Facebook className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" fill="#1877F2" stroke="white" strokeWidth={1} />
             </a>
 
             {/* Instagram */}
