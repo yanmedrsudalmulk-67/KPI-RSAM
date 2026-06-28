@@ -542,7 +542,17 @@ export default function GrafikPage() {
               ) : (
                 <LineChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} tick={<CustomXAxisTick />} interval={0} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#64748B" 
+                    fontSize={11} 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickMargin={10} 
+                    tick={<CustomXAxisTick />} 
+                    interval={0}
+                    padding={{ left: 60, right: 60 }}
+                  />
                   <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}

@@ -470,7 +470,11 @@ export async function getDashboardSummaryText(tahun: number, periode: string): P
       .single();
 
     if (error) {
-      console.warn("Could not fetch summary text (table might not exist yet):", error);
+      if (error.code === 'PGRST205') {
+        console.info("Info: Tabel 'dashboard_summary' belum dibuat di Supabase. Ringkasan analisis disimpan di lokal (localStorage). Silakan jalankan script setup SQL tambahan di file supabase_setup.sql jika ingin menyimpannya di cloud.");
+      } else if (error.code !== 'PGRST116') {
+        console.warn("Could not fetch summary text (table might not exist yet):", error.message || error);
+      }
       return null;
     }
     return data?.summary_text || null;
@@ -494,6 +498,9 @@ export async function saveDashboardSummaryText(tahun: number, periode: string, t
 
     if (fetchErr && fetchErr.code !== 'PGRST116') {
       // PGRST116 = no rows returned
+      if (fetchErr.code === 'PGRST205') {
+        throw new Error("Tabel 'dashboard_summary' belum dibuat di database Supabase Anda. Silakan jalankan script SQL yang ada di supabase_setup.sql pada SQL Editor Supabase Anda.");
+      }
       console.error("Error checking existing summary:", fetchErr);
     }
 
@@ -509,7 +516,12 @@ export async function saveDashboardSummaryText(tahun: number, periode: string, t
         .insert([{ tahun, periode, summary_text: text, updated_at: new Date().toISOString() }]);
       if (insertErr) throw insertErr;
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.code === 'PGRST205' || (err.message && err.message.includes('dashboard_summary')))) {
+      const errMsg = "Tabel 'dashboard_summary' belum dibuat di database Supabase Anda. Silakan jalankan script SQL yang ada di supabase_setup.sql pada SQL Editor Supabase Anda.";
+      console.warn(errMsg);
+      throw new Error(errMsg);
+    }
     console.error("Failed to save dashboard summary to Supabase:", err);
     throw err;
   }
