@@ -15,7 +15,8 @@ import {
   RefreshCw,
   Eye,
   Wallpaper,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  FileText
 } from "lucide-react";
 import Image from "next/image";
 
@@ -28,6 +29,20 @@ export default function PengaturanPage() {
     text: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Dynamic Header State Variables
+  const [logoPemkotUrl, setLogoPemkotUrl] = useState<string | null>(null);
+  const [logoRsUrl, setLogoRsUrl] = useState<string | null>(null);
+  const [headerLine1, setHeaderLine1] = useState<string>("PEMERINTAH KOTA SUKABUMI");
+  const [headerLine2, setHeaderLine2] = useState<string>("DINAS KESEHATAN");
+  const [headerLine3, setHeaderLine3] = useState<string>("UOBK RSUD AL-MULK KOTA SUKABUMI");
+  const [headerLine4, setHeaderLine4] = useState<string>("Jl. Jend. Sudirman No. 123 Kota Sukabumi, Kode Pos 43111, Telp: (0266) 123456, Email: rsudalmulk@sukabumikota.go.id, Website: rsudalmulk.sukabumikota.go.id");
+  
+  const [filePemkot, setFilePemkot] = useState<File | null>(null);
+  const [fileRs, setFileRs] = useState<File | null>(null);
+  const [isUploadingPemkot, setIsUploadingPemkot] = useState(false);
+  const [isUploadingRs, setIsUploadingRs] = useState(false);
+  const [isSavingHeader, setIsSavingHeader] = useState(false);
 
   // Background Settings State
   const [welcomeBgType, setWelcomeBgType] = useState<"default" | "image" | "video">("default");
@@ -118,6 +133,14 @@ export default function PengaturanPage() {
                 setSocialTiktok(parsed.social_media.tiktok || "");
                 setSocialWebsite(parsed.social_media.website || "");
               }
+
+              // Dynamic header
+              if (parsed.logo_pemkot_url) setLogoPemkotUrl(parsed.logo_pemkot_url);
+              if (parsed.logo_rs_url) setLogoRsUrl(parsed.logo_rs_url);
+              if (parsed.header_line_1) setHeaderLine1(parsed.header_line_1);
+              if (parsed.header_line_2) setHeaderLine2(parsed.header_line_2);
+              if (parsed.header_line_3) setHeaderLine3(parsed.header_line_3);
+              if (parsed.header_line_4) setHeaderLine4(parsed.header_line_4);
             } catch (jsonErr) {
               setLogoUrl(rawUrl);
             }
@@ -154,6 +177,14 @@ export default function PengaturanPage() {
               setSocialTiktok(parsed.social_media.tiktok || "");
               setSocialWebsite(parsed.social_media.website || "");
             }
+
+            // Dynamic header
+            if (parsed.logo_pemkot_url) setLogoPemkotUrl(parsed.logo_pemkot_url);
+            if (parsed.logo_rs_url) setLogoRsUrl(parsed.logo_rs_url);
+            if (parsed.header_line_1) setHeaderLine1(parsed.header_line_1);
+            if (parsed.header_line_2) setHeaderLine2(parsed.header_line_2);
+            if (parsed.header_line_3) setHeaderLine3(parsed.header_line_3);
+            if (parsed.header_line_4) setHeaderLine4(parsed.header_line_4);
           } catch (jsonErr) {
             // ignore, treated as normal URL
           }
@@ -181,6 +212,156 @@ export default function PengaturanPage() {
       console.error("Unexpected error in fetchSettings:", err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveHeaderSettings = async (overrideParams?: any) => {
+    if (!supabase) return;
+    setIsSavingHeader(true);
+    setStatusMessage(null);
+    try {
+      // 1. Check if we have un-uploaded files and upload them first!
+      let finalLogoPemkotUrl = overrideParams?.logo_pemkot_url !== undefined ? overrideParams.logo_pemkot_url : logoPemkotUrl;
+      let finalLogoRsUrl = overrideParams?.logo_rs_url !== undefined ? overrideParams.logo_rs_url : logoRsUrl;
+
+      if (filePemkot) {
+        try {
+          const fileExt = filePemkot.name.split(".").pop();
+          const fileName = `logo-pemkot-${Date.now()}.${fileExt}`;
+          const filePath = `logos/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("assets")
+            .upload(filePath, filePemkot, { upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(filePath);
+          finalLogoPemkotUrl = publicUrl;
+          setLogoPemkotUrl(publicUrl);
+          setFilePemkot(null);
+        } catch (uploadErr: any) {
+          throw new Error(`Gagal mengunggah Logo Pemkot: ${uploadErr.message}`);
+        }
+      }
+
+      if (fileRs) {
+        try {
+          const fileExt = fileRs.name.split(".").pop();
+          const fileName = `logo-rs-${Date.now()}.${fileExt}`;
+          const filePath = `logos/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("assets")
+            .upload(filePath, fileRs, { upsert: true });
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(filePath);
+          finalLogoRsUrl = publicUrl;
+          setLogoRsUrl(publicUrl);
+          setFileRs(null);
+        } catch (uploadErr: any) {
+          throw new Error(`Gagal mengunggah Logo RS: ${uploadErr.message}`);
+        }
+      }
+
+      // 2. Fetch current settings (selecting only logo_url to avoid schema problems)
+      const { data: current } = await supabase
+        .from("settings")
+        .select("logo_url")
+        .eq("id", 1)
+        .maybeSingle();
+
+      let jsonPayload: any = {};
+      if (current && current.logo_url && current.logo_url.startsWith('{')) {
+        try {
+          jsonPayload = JSON.parse(current.logo_url);
+        } catch (e) {}
+      } else if (current) {
+        jsonPayload.logo_url = current.logo_url || "";
+      }
+
+      // Merge current and new values
+      jsonPayload.logo_pemkot_url = finalLogoPemkotUrl;
+      jsonPayload.logo_rs_url = finalLogoRsUrl;
+      jsonPayload.header_line_1 = overrideParams?.header_line_1 !== undefined ? overrideParams.header_line_1 : headerLine1;
+      jsonPayload.header_line_2 = overrideParams?.header_line_2 !== undefined ? overrideParams.header_line_2 : headerLine2;
+      jsonPayload.header_line_3 = overrideParams?.header_line_3 !== undefined ? overrideParams.header_line_3 : headerLine3;
+      jsonPayload.header_line_4 = overrideParams?.header_line_4 !== undefined ? overrideParams.header_line_4 : headerLine4;
+
+      const nextLogoValue = JSON.stringify(jsonPayload);
+
+      // 3. Upsert into database (only using id and logo_url to ensure it never fails due to missing column schemas)
+      const { error: dbError } = await supabase
+        .from("settings")
+        .upsert({ id: 1, logo_url: nextLogoValue }, { onConflict: "id" });
+
+      if (dbError) throw dbError;
+
+      setStatusMessage({ type: "success", text: "Pengaturan Header Laporan berhasil disimpan!" });
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: `Gagal menyimpan header: ${err.message}` });
+    } finally {
+      setIsSavingHeader(false);
+    }
+  };
+
+  const handleUploadPemkot = async () => {
+    if (!filePemkot || !supabase) return;
+    setIsUploadingPemkot(true);
+    setStatusMessage(null);
+    try {
+      const fileExt = filePemkot.name.split(".").pop();
+      const fileName = `logo-pemkot-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(filePath, filePemkot, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(filePath);
+      
+      setLogoPemkotUrl(publicUrl);
+      setFilePemkot(null);
+      
+      // Save instantly
+      await handleSaveHeaderSettings({ logo_pemkot_url: publicUrl });
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: `Gagal upload Logo Pemkot: ${err.message}` });
+    } finally {
+      setIsUploadingPemkot(false);
+    }
+  };
+
+  const handleUploadRs = async () => {
+    if (!fileRs || !supabase) return;
+    setIsUploadingRs(true);
+    setStatusMessage(null);
+    try {
+      const fileExt = fileRs.name.split(".").pop();
+      const fileName = `logo-rs-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(filePath, fileRs, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(filePath);
+      
+      setLogoRsUrl(publicUrl);
+      setFileRs(null);
+      
+      // Save instantly
+      await handleSaveHeaderSettings({ logo_rs_url: publicUrl });
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: `Gagal upload Logo RS: ${err.message}` });
+    } finally {
+      setIsUploadingRs(false);
     }
   };
 
@@ -724,7 +905,178 @@ export default function PengaturanPage() {
 
         {/* Right Hand: Deep luxury background customizer (2/3 width) */}
         <div className="lg:col-span-8 space-y-6">
-          
+
+          {/* A. Pengaturan Kop Surat / Header Laporan */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/30 flex items-center justify-center">
+                <FileText className="w-6 h-6 text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">Pengaturan Kop Surat / Header Laporan</h2>
+                <p className="text-sm text-gray-400">
+                  Ubah logo resmi pemerintah kota, logo rumah sakit, serta identitas instansi yang akan dicetak di header PDF KPI.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6 relative z-10">
+              
+              {/* Dua Logo Upload Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/10">
+                
+                {/* Logo Pemkot Sukabumi */}
+                <div className="space-y-3">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Logo 1: Pemerintah Kota Sukabumi</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl bg-dark-navy/50 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoPemkotUrl ? (
+                        <img src={logoPemkotUrl} alt="Logo Pemkot" className="max-w-full max-h-full object-contain p-1" />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="border-2 border-dashed border-white/10 hover:border-indigo-500/50 transition-colors bg-dark-navy/30 rounded-xl p-2.5 flex flex-col items-center justify-center cursor-pointer min-h-[50px]">
+                        <Upload className="w-4 h-4 text-gray-500 mb-1" />
+                        <span className="text-[11px] text-gray-400 text-center truncate max-w-full">
+                          {filePemkot ? filePemkot.name : "Pilih Logo Pemkot"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setFilePemkot(e.target.files[0]);
+                              setStatusMessage(null);
+                            }
+                          }}
+                        />
+                      </label>
+                      {filePemkot && (
+                        <button
+                          onClick={handleUploadPemkot}
+                          disabled={isUploadingPemkot}
+                          className="w-full flex items-center justify-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium transition-all active:scale-95"
+                        >
+                          {isUploadingPemkot ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                          Unggah Logo Pemkot
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logo RSUD Al-Mulk */}
+                <div className="space-y-3">
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Logo 2: RSUD Al-Mulk Sukabumi</span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 h-20 rounded-xl bg-dark-navy/50 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoRsUrl ? (
+                        <img src={logoRsUrl} alt="Logo RSUD Al-Mulk" className="max-w-full max-h-full object-contain p-1" />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-gray-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className="border-2 border-dashed border-white/10 hover:border-indigo-500/50 transition-colors bg-dark-navy/30 rounded-xl p-2.5 flex flex-col items-center justify-center cursor-pointer min-h-[50px]">
+                        <Upload className="w-4 h-4 text-gray-500 mb-1" />
+                        <span className="text-[11px] text-gray-400 text-center truncate max-w-full">
+                          {fileRs ? fileRs.name : "Pilih Logo RS"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setFileRs(e.target.files[0]);
+                              setStatusMessage(null);
+                            }
+                          }}
+                        />
+                      </label>
+                      {fileRs && (
+                        <button
+                          onClick={handleUploadRs}
+                          disabled={isUploadingRs}
+                          className="w-full flex items-center justify-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium transition-all active:scale-95"
+                        >
+                          {isUploadingRs ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                          Unggah Logo RS
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Teks Identitas KOP Surat */}
+              <div className="space-y-4">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">Identitas Kop Surat (Teks Tengah)</span>
+                
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1">Baris 1 - Pemerintah (Teks Bold)</label>
+                  <input
+                    type="text"
+                    value={headerLine1}
+                    onChange={(e) => setHeaderLine1(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-gray-600"
+                    placeholder="PEMERINTAH KOTA SUKABUMI"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1">Baris 2 - Dinas Kesehatan (Teks Regular)</label>
+                  <input
+                    type="text"
+                    value={headerLine2}
+                    onChange={(e) => setHeaderLine2(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-gray-600"
+                    placeholder="DINAS KESEHATAN"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1">Baris 3 - Nama Unit / Rumah Sakit (Teks Bold)</label>
+                  <input
+                    type="text"
+                    value={headerLine3}
+                    onChange={(e) => setHeaderLine3(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-gray-600"
+                    placeholder="UOBK RSUD AL-MULK KOTA SUKABUMI"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-300 block mb-1">Baris 4 - Alamat & Kontak Lengkap (Teks Regular)</label>
+                  <textarea
+                    rows={3}
+                    value={headerLine4}
+                    onChange={(e) => setHeaderLine4(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-gray-600 resize-none"
+                    placeholder="Jl. Jend. Sudirman No. 123 Kota Sukabumi..."
+                  />
+                </div>
+
+                <button
+                  onClick={() => handleSaveHeaderSettings()}
+                  disabled={isSavingHeader}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-sm font-medium transition-transform active:scale-[0.98] disabled:opacity-50 mt-4"
+                >
+                  {isSavingHeader ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                  Simpan Identitas Kop Surat
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+
           {/* Welcome Background Panel */}
           <div className="glassmorphism p-6 rounded-2xl border border-white/5 space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-white/5 pb-4 gap-3">

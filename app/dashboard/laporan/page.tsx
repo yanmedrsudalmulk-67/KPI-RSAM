@@ -3,12 +3,15 @@
 import { useEffect, useState, useMemo, Fragment } from "react";
 import { 
   FileText, Printer, 
-  Search, Activity, Target, CheckCircle2, AlertTriangle, XCircle
+  Search, Activity, Target, CheckCircle2, AlertTriangle, XCircle,
+  Loader2
 } from "lucide-react";
 import { getAllDataForAnalytics } from "@/lib/services/api";
 import { pilarKpi } from "@/lib/data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { motion, animate } from "motion/react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const JENIS_LAPORAN = ["Bulanan", "Triwulan", "Semester", "Tahunan"];
@@ -17,6 +20,14 @@ export default function LaporanPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  // Header settings state
+  const [logoPemkotUrl, setLogoPemkotUrl] = useState<string | null>(null);
+  const [logoRsUrl, setLogoRsUrl] = useState<string | null>(null);
+  const [headerLine1, setHeaderLine1] = useState<string>("PEMERINTAH KOTA SUKABUMI");
+  const [headerLine2, setHeaderLine2] = useState<string>("DINAS KESEHATAN");
+  const [headerLine3, setHeaderLine3] = useState<string>("UOBK RSUD AL-MULK KOTA SUKABUMI");
+  const [headerLine4, setHeaderLine4] = useState<string>("Jl. Jend. Sudirman No. 123 Kota Sukabumi, Kode Pos 43111, Telp: (0266) 123456, Email: rsudalmulk@sukabumikota.go.id, Website: rsudalmulk.sukabumikota.go.id");
 
   // Filters
   const [filterJenisLaporan, setFilterJenisLaporan] = useState<string>("Bulanan");
@@ -39,8 +50,15 @@ export default function LaporanPage() {
               if (settingsData.logo_url.startsWith("{")) {
                 const parsed = JSON.parse(settingsData.logo_url);
                 if (parsed.logo_url) setLogoUrl(parsed.logo_url);
+                if (parsed.logo_pemkot_url) setLogoPemkotUrl(parsed.logo_pemkot_url);
+                if (parsed.logo_rs_url) setLogoRsUrl(parsed.logo_rs_url);
+                if (parsed.header_line_1) setHeaderLine1(parsed.header_line_1);
+                if (parsed.header_line_2) setHeaderLine2(parsed.header_line_2);
+                if (parsed.header_line_3) setHeaderLine3(parsed.header_line_3);
+                if (parsed.header_line_4) setHeaderLine4(parsed.header_line_4);
               } else {
                 setLogoUrl(settingsData.logo_url);
+                setLogoRsUrl(settingsData.logo_url);
               }
             }
           }
@@ -176,6 +194,370 @@ export default function LaporanPage() {
     return `TAHUN ${filterTahun}`;
   };
 
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const getBase64ImageFromUrl = async (url: string): Promise<string> => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn("Failed to fetch image via URL fetch, trying alternative Image element method", err);
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.setAttribute("src", url);
+        img.setAttribute("crossOrigin", "anonymous");
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const dataURL = canvas.toDataURL("image/png");
+            resolve(dataURL);
+          } else {
+            reject(new Error("Could not get canvas context"));
+          }
+        };
+        img.onerror = (e) => reject(e);
+      });
+    }
+  };
+
+  const getPdfTargetTitle = () => {
+    if (filterJenisLaporan === "Bulanan") return "Target / \nBulan Ini";
+    if (filterJenisLaporan === "Triwulan") return "Target / \nTriwulan";
+    if (filterJenisLaporan === "Semester") return "Target / \nSemester";
+    return "Target / \nTahun Ini";
+  };
+
+  const getPdfRealisasiTitle = () => {
+    if (filterJenisLaporan === "Bulanan") return "Realisasi / \nBulan Ini";
+    if (filterJenisLaporan === "Triwulan") return "Realisasi / \nTriwulan";
+    if (filterJenisLaporan === "Semester") return "Realisasi / \nSemester";
+    return "Realisasi / \nTahun Ini";
+  };
+
+  const downloadPDF = async () => {
+    setIsDownloadingPdf(true);
+    try {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // 1. Fetch logo base64 if available
+      let pemkotBase64 = "";
+      let rsBase64 = "";
+      if (logoPemkotUrl) {
+        try {
+          pemkotBase64 = await getBase64ImageFromUrl(logoPemkotUrl);
+        } catch (e) {
+          console.warn("Error getting Pemkot logo base64:", e);
+        }
+      }
+      if (logoRsUrl) {
+        try {
+          rsBase64 = await getBase64ImageFromUrl(logoRsUrl);
+        } catch (e) {
+          console.warn("Error getting RSUD logo base64:", e);
+        }
+      }
+
+      // Helper function to draw dynamic header on first page
+      const drawFirstPageHeader = () => {
+        // Left Logo (Pemkot)
+        if (pemkotBase64) {
+          doc.addImage(pemkotBase64, "PNG", 20, 16, 18, 22);
+        }
+        // Right Logo (RS)
+        if (rsBase64) {
+          doc.addImage(rsBase64, "PNG", 172, 16, 18, 22);
+        }
+
+        // Center Text Block
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(0);
+        doc.text(headerLine1.toUpperCase(), 105, 20, { align: "center" });
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(headerLine2.toUpperCase(), 105, 25, { align: "center" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text(headerLine3.toUpperCase(), 105, 30, { align: "center" });
+
+        // Address & details wrapping
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        const wrappedAddress = doc.splitTextToSize(headerLine4, 125);
+        doc.text(wrappedAddress, 105, 35, { align: "center" });
+
+        // Double Horizontal Line (kop surat style)
+        doc.setLineWidth(0.8);
+        doc.line(20, 44.5, 190, 44.5);
+        doc.setLineWidth(0.25);
+        doc.line(20, 46.0, 190, 46.0);
+      };
+
+      // Draw the header on the first page
+      drawFirstPageHeader();
+
+      // 2. Document Title
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("LAPORAN KEY PERFORMANCE INDICATOR (KPI)", 105, 54, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.text(`PERIODE: ${getPeriodeString()}`, 105, 59, { align: "center" });
+
+      // 3. Prepare table rows
+      const tableRows: any[] = [];
+      const grouped: Record<string, any[]> = {};
+      
+      finalFilteredData.forEach(d => {
+        if (!grouped[d.pilar]) grouped[d.pilar] = [];
+        grouped[d.pilar].push(d);
+      });
+
+      const pilarNames = pilarKpi.map(p => p.name);
+      const existingPilars = Object.keys(grouped).sort((a, b) => pilarNames.indexOf(a) - pilarNames.indexOf(b));
+
+      let globalIndex = 0;
+
+      existingPilars.forEach(pilarName => {
+        // Add Pillar Header Row
+        tableRows.push([
+          {
+            content: pilarName.toUpperCase(),
+            colSpan: 6,
+            styles: {
+              fillColor: [242, 242, 242],
+              textColor: [0, 0, 0],
+              fontStyle: 'bold',
+              fontSize: 8.5,
+              halign: 'left'
+            }
+          }
+        ]);
+
+        const rawRows = grouped[pilarName];
+        
+        // Detect sub-groups (e.g. "Jumlah aset yang dimanfaatkan - " or "Cross selling - ")
+        const subGroupRows: any[] = [];
+        let addedOptimalisasiAsetParent = false;
+        let addedCrossSellingParent = false;
+
+        rawRows.forEach((d) => {
+          const rawName = d.nama_indikator || "";
+          if (rawName.startsWith("Jumlah aset yang dimanfaatkan - ")) {
+            if (!addedOptimalisasiAsetParent) {
+              subGroupRows.push({
+                isParent: true,
+                isChild: false,
+                name: "Jumlah aset yang dimanfaatkan",
+                id: "parent-optimalisasi-aset",
+              });
+              addedOptimalisasiAsetParent = true;
+            }
+            const subName = rawName.replace("Jumlah aset yang dimanfaatkan - ", "");
+            subGroupRows.push({
+              isParent: false,
+              isChild: true,
+              name: subName,
+              ...d
+            });
+          } else if (rawName.startsWith("Cross selling - ")) {
+            if (!addedCrossSellingParent) {
+              subGroupRows.push({
+                isParent: true,
+                isChild: false,
+                name: "Cross selling",
+                id: "parent-cross-selling",
+              });
+              addedCrossSellingParent = true;
+            }
+            const subName = rawName.replace("Cross selling - ", "");
+            subGroupRows.push({
+              isParent: false,
+              isChild: true,
+              name: subName,
+              ...d
+            });
+          } else {
+            subGroupRows.push({
+              isParent: false,
+              isChild: false,
+              name: rawName,
+              ...d
+            });
+          }
+        });
+
+        subGroupRows.forEach((row) => {
+          let displayNo = "";
+          if (row.isParent) {
+            globalIndex++;
+            displayNo = globalIndex.toString();
+          } else if (!row.isChild) {
+            globalIndex++;
+            displayNo = globalIndex.toString();
+          }
+
+          if (row.isParent) {
+            tableRows.push([
+              displayNo,
+              row.name,
+              "",
+              "",
+              "",
+              ""
+            ]);
+          } else {
+            const displayName = row.isChild ? `      ${row.name}` : row.name;
+            tableRows.push([
+              displayNo,
+              displayName,
+              row.targetValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }),
+              row.realisasiValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }),
+              `${Math.round(row.progress)}%`,
+              row.statusStr
+            ]);
+          }
+        });
+      });
+
+      // 4. Render Table
+      autoTable(doc, {
+        startY: 65,
+        head: [[
+          { content: "No", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
+          { content: "Uraian KPI", styles: { halign: 'left', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
+          { content: `${getPdfTargetTitle()}`, styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
+          { content: `${getPdfRealisasiTitle()}`, styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
+          { content: "% Capaian", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
+          { content: "Status", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } }
+        ]],
+        body: tableRows,
+        margin: { top: 20, bottom: 20, left: 20, right: 20 },
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.1,
+          font: "helvetica",
+          textColor: [0, 0, 0]
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' }, // No
+          1: { cellWidth: 80, halign: 'left' },   // Uraian KPI
+          2: { cellWidth: 22, halign: 'center' }, // Target
+          3: { cellWidth: 22, halign: 'center' }, // Realisasi
+          4: { cellWidth: 18, halign: 'center' }, // % Capaian
+          5: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }  // Status
+        },
+        didParseCell: function (data) {
+          if (data.row.index >= 0) {
+            const isPilarHeader = (data.row.cells[0]?.raw as any)?.colSpan === 6;
+            if (isPilarHeader) return;
+
+            const isChild = data.column.index === 1 && data.cell.text[0]?.startsWith("      ");
+            if (isChild) {
+              data.cell.styles.textColor = [100, 100, 100];
+            }
+
+            if (data.column.index === 5) {
+              const statusText = data.cell.text[0];
+              if (statusText === "Tercapai") {
+                data.cell.styles.textColor = [0, 128, 0];
+              } else if (statusText === "Hampir Tercapai") {
+                data.cell.styles.textColor = [180, 120, 0];
+              } else if (statusText === "Belum Tercapai") {
+                data.cell.styles.textColor = [180, 0, 0];
+              }
+            }
+          }
+        },
+        didDrawPage: function (data) {
+          // Top mini header on pages after the first
+          if (data.pageNumber > 1) {
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7.5);
+            doc.setTextColor(100);
+            doc.text("Laporan KPI UOBK RSUD Al-Mulk Kota Sukabumi", 20, 12);
+            doc.setLineWidth(0.1);
+            doc.line(20, 13, 190, 13);
+          }
+        }
+      });
+
+      // 5. Signature Block Page Allocation
+      let finalY = (doc as any).lastAutoTable.finalY || 100;
+      if (finalY + 55 > 280) {
+        doc.addPage();
+        finalY = 20;
+      }
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(0);
+
+      doc.text("Mengetahui,", 30, finalY + 15);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("WALI KOTA SUKABUMI,", 30, finalY + 20);
+
+      const titleLines = doc.splitTextToSize("DIREKTUR UOBK RSUD AL-MULK\nKOTA SUKABUMI,", 70);
+      doc.text(titleLines, 120, finalY + 20);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("H. AYEP ZAKI", 30, finalY + 45);
+
+      doc.text("Dr. Deni Purnama, S.Kep., MKM., FISQua", 120, finalY + 45);
+
+      doc.setFont("helvetica", "normal");
+      doc.text("NIP. 198011092003121002", 120, finalY + 50);
+
+      // 6. Double-pass page number footer stamping
+      const pageCount = doc.internal.pages.length - 1;
+      const printedDateStr = new Date().toLocaleDateString("id-ID", {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+      const printedTimeStr = new Date().toLocaleTimeString("id-ID", {
+        hour: '2-digit', minute: '2-digit'
+      });
+
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(120);
+
+        doc.text(`Dicetak: ${printedDateStr}, ${printedTimeStr} oleh Petugas RSUD Al-Mulk`, 20, 287);
+        doc.text(`Halaman ${i} dari ${pageCount}`, 190, 287, { align: "right" });
+      }
+
+      // Save PDF
+      doc.save(`Laporan_KPI_RSUD_Al_Mulk_${filterJenisLaporan}_${getPeriodeString().replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      console.error("Error generating professional PDF:", err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col space-y-6 max-w-[1400px] mx-auto p-4">
@@ -207,9 +589,37 @@ export default function LaporanPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-navy/80 border border-white/10 text-white font-medium hover:bg-white/10 transition-colors shadow-sm">
-            <Printer className="w-4 h-4 text-gray-400" /> Print
-          </button>
+          {/* Keyframes for glowing border animation */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes border-glow {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}} />
+
+          <div className="relative p-[1.5px] overflow-hidden rounded-xl bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.25)] hover:shadow-[0_0_30px_rgba(59,130,246,0.45)] transition-all duration-300">
+            {/* Rotating glowing line */}
+            <div 
+              className="absolute inset-[-1000%] bg-[conic-gradient(from_0deg,transparent_30%,#3b82f6_45%,#60a5fa_50%,#3b82f6_55%,transparent_70%)]"
+              style={{
+                animation: "border-glow 3s linear infinite"
+              }}
+            />
+            
+            {/* Blue glassmorphism button */}
+            <button
+              onClick={downloadPDF}
+              disabled={isDownloadingPdf}
+              className="relative flex items-center gap-2 px-5 py-2.5 rounded-[10.5px] bg-blue-950/70 hover:bg-blue-900/80 text-blue-100 hover:text-white font-semibold transition-colors backdrop-blur-xl disabled:opacity-50"
+            >
+              {isDownloadingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+              ) : (
+                <FileText className="w-4 h-4 text-blue-400" />
+              )}
+              {isDownloadingPdf ? "Generating PDF..." : "Download PDF"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -321,22 +731,22 @@ export default function LaporanPage() {
         <div className="overflow-x-auto print:overflow-visible max-h-[600px] overflow-y-auto">
           <table className="w-full text-left border-collapse print:text-xs min-w-[800px]">
             <thead className="sticky top-0 bg-dark-navy/95 backdrop-blur-sm z-10 print:static print:bg-transparent shadow-sm">
-              <tr className="border-b border-white/10 print:border-black">
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[5%] text-center text-[15px] border-r border-white/10">No</th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[40%] text-center text-[15px] border-r border-white/10">
-                  Uraian KPI
+              <tr className="border-b border-white/10 print:border-black uppercase">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[5%] text-center text-[12px] border-r border-white/10">NO</th>
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[40%] text-center text-[12px] border-r border-white/10">
+                  URAIAN KPI
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[15px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[11px] border-r border-white/10">
                   {getTargetTitle()}
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[15px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[11px] border-r border-white/10">
                   {getRealisasiTitle()}
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[15px] border-r border-white/10">
-                  % Capaian
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[12px] border-r border-white/10">
+                  % CAPAIAN
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[15px]">
-                  Status
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[12px]">
+                  STATUS
                 </th>
               </tr>
             </thead>
