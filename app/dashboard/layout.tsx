@@ -125,16 +125,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-24 md:pb-0 relative">
-        {/* Mobile Header (Slightly more premium glass effect) */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-dark-charcoal/80 backdrop-blur-xl border-b border-white/5 sticky top-0 z-40">
-          <div className="flex items-center gap-3">
+        {/* Mobile Header (Premium Glassmorphism 2.0 with Fixed/Sticky Behavior) */}
+        <header className="fixed top-0 left-0 right-0 md:hidden flex items-center justify-between p-4 bg-slate-950/40 backdrop-blur-3xl backdrop-saturate-150 border-b border-white/10 z-40 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+          <div className="flex items-center gap-4">
             <RSLogo size="large" />
             <div className="flex flex-col">
-              <span className="font-poppins font-bold text-xs text-blue-50 tracking-wide drop-shadow-md">UOBK RSUD AL-MULK</span>
-              <span className="font-poppins font-medium text-[8px] text-blue-300/80 tracking-[0.1em] uppercase">Kota Sukabumi</span>
+              <span className="font-roboto-condensed font-bold text-lg text-white tracking-wide drop-shadow-md">
+                UOBK RSUD AL-MULK
+              </span>
+              <span className="font-roboto-condensed font-bold text-xs text-[#8aed86] tracking-[0.2em] uppercase">
+                Kota Sukabumi
+              </span>
             </div>
           </div>
         </header>
+
+        {/* Mobile Header Spacer to prevent layout overlap */}
+        <div className="h-[75px] md:hidden shrink-0" />
 
         {/* Content Area */}
         <div className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto">
@@ -185,6 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="space-y-3 px-1">
+              <MobileMenuItem href="/dashboard/laporan" icon={<FileOutput />} label="Laporan" active={pathname === "/dashboard/laporan"} onClick={() => setIsMobileMenuOpen(false)} />
               <MobileMenuItem href="/dashboard/pengaturan" icon={<Settings />} label="Pengaturan" active={pathname === "/dashboard/pengaturan"} onClick={() => setIsMobileMenuOpen(false)} />
             </div>
 

@@ -702,7 +702,7 @@ export default function LaporanPage() {
       {/* B. Card Tabel Laporan */}
       <div className="rounded-2xl glassmorphism border border-white/5 overflow-hidden print:border-none print:shadow-none print:bg-transparent">
         <div className="p-6 md:p-8 border-b border-white/5 bg-dark-navy/40 print:bg-transparent print:border-none">
-          <div className="flex items-center justify-center gap-4 text-center w-full max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-center w-full max-w-4xl mx-auto">
             <div className="w-[96px] h-[75px] flex items-center justify-center shrink-0 print:bg-transparent overflow-hidden">
               {logoUrl ? (
                 <img 
@@ -717,10 +717,10 @@ export default function LaporanPage() {
               ) : null}
               <Activity className={`w-[75px] h-[75px] text-primary-cyan print:text-black ${logoUrl ? 'hidden' : ''}`} />
             </div>
-            <div className="flex flex-col items-center justify-center flex-1 max-w-2xl h-[90px] w-[656px] m-0 p-0">
-              <h2 className="text-[25px] font-bold text-white uppercase tracking-wider print:text-black text-center h-[28.5px]">LAPORAN KEY PERFORMANCE INDICATOR (KPI)</h2>
-              <h3 className="text-[25px] font-bold text-white uppercase tracking-wide mt-1 print:text-black text-center h-[28.5px]">UOBK RSUD AL-MULK KOTA SUKABUMI</h3>
-              <p className="text-[20px] font-semibold text-primary-cyan mt-[5px] uppercase print:text-black text-center h-[28px]">
+            <div className="flex flex-col items-center justify-center flex-1 max-w-2xl h-auto md:h-[90px] w-full md:w-[656px] m-0 p-0 gap-1 md:gap-0">
+              <h2 className="text-sm sm:text-base md:text-[25px] font-bold text-white uppercase tracking-wider print:text-black text-center h-auto md:h-[28.5px] leading-tight">LAPORAN KEY PERFORMANCE INDICATOR (KPI)</h2>
+              <h3 className="text-sm sm:text-base md:text-[25px] font-bold text-white uppercase tracking-wide mt-1 print:text-black text-center h-auto md:h-[28.5px] leading-tight">UOBK RSUD AL-MULK KOTA SUKABUMI</h3>
+              <p className="text-xs sm:text-sm md:text-[20px] font-semibold text-primary-cyan mt-[5px] uppercase print:text-black text-center h-auto md:h-[28px] leading-tight">
                 PERIODE {getPeriodeString()}
               </p>
             </div>
