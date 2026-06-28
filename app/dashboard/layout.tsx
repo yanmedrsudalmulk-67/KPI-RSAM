@@ -125,23 +125,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-24 md:pb-0 relative">
-        {/* Mobile Header (Premium Glassmorphism 2.0 with Fixed/Sticky Behavior) */}
-        <header className="fixed top-0 left-0 right-0 md:hidden flex items-center justify-between p-4 bg-slate-950/40 backdrop-blur-3xl backdrop-saturate-150 border-b border-white/10 z-40 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
+        {/* Mobile Header (Slightly more premium glass effect - Glassmorphism 2.0) */}
+        <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between p-4 bg-slate-950/60 backdrop-blur-2xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
           <div className="flex items-center gap-4">
             <RSLogo size="large" />
             <div className="flex flex-col">
-              <span className="font-roboto-condensed font-bold text-lg text-white tracking-wide drop-shadow-md">
+              <span className="font-roboto-condensed font-bold text-base text-white tracking-wide drop-shadow-md">
                 UOBK RSUD AL-MULK
               </span>
-              <span className="font-roboto-condensed font-bold text-xs text-[#8aed86] tracking-[0.2em] uppercase">
+              <span className="font-roboto-condensed font-bold text-[10px] text-[#8aed86] tracking-[0.2em] uppercase">
                 Kota Sukabumi
               </span>
             </div>
           </div>
         </header>
 
-        {/* Mobile Header Spacer to prevent layout overlap */}
-        <div className="h-[75px] md:hidden shrink-0" />
+        {/* Spacer for Fixed Mobile Header */}
+        <div className="h-[73px] md:hidden flex-shrink-0" />
 
         {/* Content Area */}
         <div className="flex-1 p-4 md:p-8 w-full max-w-7xl mx-auto">

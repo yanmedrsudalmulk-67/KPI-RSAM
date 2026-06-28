@@ -163,21 +163,3 @@ EXCEPTION
     WHEN OTHERS THEN
         RAISE NOTICE 'Notice: Gagal membuat policy untuk bucket storage "dokumen_realisasi_kpi": %', SQLERRM;
 END $$;
-
--- 8. BUAT TABEL DASHBOARD SUMMARY
-CREATE TABLE IF NOT EXISTS public.dashboard_summary (
-    id SERIAL PRIMARY KEY,
-    tahun INTEGER NOT NULL,
-    periode VARCHAR(100) NOT NULL,
-    summary_text TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(tahun, periode)
-);
-
--- Atur RLS untuk dashboard_summary
-ALTER TABLE public.dashboard_summary ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Allow public read dashboard_summary" ON public.dashboard_summary;
-DROP POLICY IF EXISTS "Allow public write/all dashboard_summary" ON public.dashboard_summary;
-
-CREATE POLICY "Allow public read dashboard_summary" ON public.dashboard_summary FOR SELECT USING (true);
-CREATE POLICY "Allow public write/all dashboard_summary" ON public.dashboard_summary FOR ALL USING (true) WITH CHECK (true);

@@ -32,16 +32,29 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
+const CompareXAxisTick = ({ x, y, payload }: any) => {
+  const val = payload.value || "";
+  const match = val.match(/(PILAR\s+\d+)/i);
+  const textToShow = match ? match[1].toUpperCase() : val.split(/[-–—]/)[0].trim().toUpperCase();
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="middle" fill="#64748B" fontSize={10} fontWeight="bold">
+        {textToShow}
+      </text>
+    </g>
+  );
+};
+
 const CustomXAxisTick = ({ x, y, payload }: any) => {
-  const isPilar6 = payload.value.startsWith("PILAR 6");
+  const isPilar6 = payload.value.toUpperCase().startsWith("PILAR 6");
   
   if (isPilar6) {
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={0} dy={16} textAnchor="middle" fill="#64748B" fontSize={8}>
+        <text x={0} y={0} dy={16} textAnchor="middle" fill="#64748B" fontSize={8} fontWeight="bold">
           PILAR 6
         </text>
-        <text x={0} y={0} dy={28} textAnchor="middle" fill="#64748B" fontSize={7}>
+        <text x={0} y={0} dy={28} textAnchor="middle" fill="#64748B" fontSize={8}>
           IKU, PROGRAM UNGGULAN
         </text>
       </g>
@@ -65,17 +78,6 @@ const CustomXAxisTick = ({ x, y, payload }: any) => {
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={16} textAnchor="middle" fill="#64748B" fontSize={10}>
         {payload.value}
-      </text>
-    </g>
-  );
-};
-
-const YearCompareXAxisTick = ({ x, y, payload }: any) => {
-  const parts = payload.value.split(" - ");
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={16} textAnchor="middle" fill="#64748B" fontSize={10} className="font-semibold">
-        {parts[0]}
       </text>
     </g>
   );
@@ -471,7 +473,7 @@ export default function GrafikPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={perbandinganTahunData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tick={<YearCompareXAxisTick />} interval={0} />
+                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tick={<CompareXAxisTick />} interval={0} />
                 <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
                 <Tooltip 
                   cursor={{fill: '#1E293B', opacity: 0.4}}
@@ -542,17 +544,7 @@ export default function GrafikPage() {
               ) : (
                 <LineChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#64748B" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickMargin={10} 
-                    tick={<CustomXAxisTick />} 
-                    interval={0}
-                    padding={{ left: 60, right: 60 }}
-                  />
+                  <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} tick={<CustomXAxisTick />} interval={0} padding={{ left: 40, right: 40 }} />
                   <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}

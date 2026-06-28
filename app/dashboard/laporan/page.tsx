@@ -197,8 +197,17 @@ export default function LaporanPage() {
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const getBase64ImageFromUrl = async (url: string): Promise<string> => {
+    if (url.startsWith("data:")) {
+      return url;
+    }
+
+    let fetchUrl = url;
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      fetchUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+    }
+
     try {
-      const res = await fetch(url);
+      const res = await fetch(fetchUrl);
       const blob = await res.blob();
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -239,11 +248,25 @@ export default function LaporanPage() {
     return "Target / \nTahun Ini";
   };
 
+  const getPdfTargetTitleUppercase = () => {
+    if (filterJenisLaporan === "Bulanan") return "TARGET BULAN INI";
+    if (filterJenisLaporan === "Triwulan") return "TARGET TRIWULAN";
+    if (filterJenisLaporan === "Semester") return "TARGET SEMESTER";
+    return "TARGET TAHUN INI";
+  };
+
   const getPdfRealisasiTitle = () => {
     if (filterJenisLaporan === "Bulanan") return "Realisasi / \nBulan Ini";
     if (filterJenisLaporan === "Triwulan") return "Realisasi / \nTriwulan";
     if (filterJenisLaporan === "Semester") return "Realisasi / \nSemester";
     return "Realisasi / \nTahun Ini";
+  };
+
+  const getPdfRealisasiTitleUppercase = () => {
+    if (filterJenisLaporan === "Bulanan") return "REALISASI BULAN INI";
+    if (filterJenisLaporan === "Triwulan") return "REALISASI TRIWULAN";
+    if (filterJenisLaporan === "Semester") return "REALISASI SEMESTER";
+    return "REALISASI TAHUN INI";
   };
 
   const downloadPDF = async () => {
@@ -273,59 +296,79 @@ export default function LaporanPage() {
         }
       }
 
+      // Helper to get image dimensions
+      const getImageDimensions = (base64Str: string): Promise<{ width: number; height: number }> => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            resolve({ width: img.width, height: img.height });
+          };
+          img.onerror = () => {
+            resolve({ width: 1, height: 1 });
+          };
+          img.src = base64Str;
+        });
+      };
+
       // Helper function to draw dynamic header on first page
-      const drawFirstPageHeader = () => {
+      const drawFirstPageHeader = async () => {
         // Left Logo (Pemkot)
         if (pemkotBase64) {
-          doc.addImage(pemkotBase64, "PNG", 20, 16, 18, 22);
+          const pemkotDimensions = await getImageDimensions(pemkotBase64);
+          const pemkotAspect = pemkotDimensions.width / pemkotDimensions.height;
+          const logoHeight = 20;
+          const pemkotWidth = logoHeight * pemkotAspect;
+          doc.addImage(pemkotBase64, "PNG", 25, 18, pemkotWidth, logoHeight);
         }
         // Right Logo (RS)
         if (rsBase64) {
-          doc.addImage(rsBase64, "PNG", 172, 16, 18, 22);
+          const rsDimensions = await getImageDimensions(rsBase64);
+          const rsAspect = rsDimensions.width / rsDimensions.height;
+          const logoHeight = 20;
+          const rsWidth = logoHeight * rsAspect;
+          doc.addImage(rsBase64, "PNG", 190 - rsWidth, 18, rsWidth, logoHeight);
         }
 
-        // Center Text Block
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
+        // Center Text Block (Header Instansi)
+        doc.setFont("times", "bold");
+        doc.setFontSize(14);
         doc.setTextColor(0);
-        doc.text(headerLine1.toUpperCase(), 105, 20, { align: "center" });
+        doc.text(headerLine1.toUpperCase(), 107.5, 23, { align: "center" });
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.text(headerLine2.toUpperCase(), 105, 25, { align: "center" });
+        doc.setFont("times", "bold");
+        doc.setFontSize(14);
+        doc.text(headerLine2.toUpperCase(), 107.5, 29, { align: "center" });
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.text(headerLine3.toUpperCase(), 105, 30, { align: "center" });
+        doc.setFont("times", "bold");
+        doc.setFontSize(16);
+        doc.text(headerLine3.toUpperCase(), 107.5, 35, { align: "center" });
 
-        // Address & details wrapping
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        const wrappedAddress = doc.splitTextToSize(headerLine4, 125);
-        doc.text(wrappedAddress, 105, 35, { align: "center" });
+        // Address wrapping
+        doc.setFont("times", "normal");
+        doc.setFontSize(9);
+        const wrappedAddress = doc.splitTextToSize(headerLine4, 110);
+        doc.text(wrappedAddress, 107.5, 40, { align: "center" });
 
         // Double Horizontal Line (kop surat style)
         doc.setLineWidth(0.8);
-        doc.line(20, 44.5, 190, 44.5);
+        doc.line(25, 48, 190, 48);
         doc.setLineWidth(0.25);
-        doc.line(20, 46.0, 190, 46.0);
+        doc.line(25, 49.5, 190, 49.5);
       };
 
       // Draw the header on the first page
-      drawFirstPageHeader();
+      await drawFirstPageHeader();
 
-      // 2. Document Title
-      doc.setFont("helvetica", "bold");
+      // 2. Document Title (positioned lower to give elegant spacing from double-line kop)
+      doc.setFont("times", "bold");
       doc.setFontSize(12);
-      doc.text("LAPORAN KEY PERFORMANCE INDICATOR (KPI)", 105, 54, { align: "center" });
+      doc.text("LAPORAN KEY PERFORMANCE INDICATOR (KPI)", 107.5, 54.5, { align: "center" });
       
-      doc.setFontSize(10);
-      doc.text(`PERIODE: ${getPeriodeString()}`, 105, 59, { align: "center" });
+      doc.setFontSize(12);
+      doc.text(`PERIODE: ${getPeriodeString().toUpperCase()}`, 107.5, 59.0, { align: "center" });
 
-      // 3. Prepare table rows
-      const tableRows: any[] = [];
+      // 3. Group Pilars into Pages based on height
       const grouped: Record<string, any[]> = {};
-      
       finalFilteredData.forEach(d => {
         if (!grouped[d.pilar]) grouped[d.pilar] = [];
         grouped[d.pilar].push(d);
@@ -334,27 +377,23 @@ export default function LaporanPage() {
       const pilarNames = pilarKpi.map(p => p.name);
       const existingPilars = Object.keys(grouped).sort((a, b) => pilarNames.indexOf(a) - pilarNames.indexOf(b));
 
-      let globalIndex = 0;
+      interface PageGroup {
+        pilars: {
+          name: string;
+          rows: any[];
+          estimatedHeight: number;
+        }[];
+      }
+
+      const pages: PageGroup[] = [{ pilars: [] }];
+      let currentPageIndex = 0;
+      let currentPageY = 64.0; // Starting Y on page 1 after kop and title to give perfect spacing (exactly 5mm below title line 2)
+      let tempGlobalIndex = 0;
 
       existingPilars.forEach(pilarName => {
-        // Add Pillar Header Row
-        tableRows.push([
-          {
-            content: pilarName.toUpperCase(),
-            colSpan: 6,
-            styles: {
-              fillColor: [242, 242, 242],
-              textColor: [0, 0, 0],
-              fontStyle: 'bold',
-              fontSize: 8.5,
-              halign: 'left'
-            }
-          }
-        ]);
-
-        const rawRows = grouped[pilarName];
+        const rawRows = grouped[pilarName] || [];
         
-        // Detect sub-groups (e.g. "Jumlah aset yang dimanfaatkan - " or "Cross selling - ")
+        // Detect sub-groups to know exact row count
         const subGroupRows: any[] = [];
         let addedOptimalisasiAsetParent = false;
         let addedCrossSellingParent = false;
@@ -363,36 +402,24 @@ export default function LaporanPage() {
           const rawName = d.nama_indikator || "";
           if (rawName.startsWith("Jumlah aset yang dimanfaatkan - ")) {
             if (!addedOptimalisasiAsetParent) {
-              subGroupRows.push({
-                isParent: true,
-                isChild: false,
-                name: "Jumlah aset yang dimanfaatkan",
-                id: "parent-optimalisasi-aset",
-              });
+              subGroupRows.push({ isParent: true, isChild: false, name: "Jumlah aset yang dimanfaatkan" });
               addedOptimalisasiAsetParent = true;
             }
-            const subName = rawName.replace("Jumlah aset yang dimanfaatkan - ", "");
             subGroupRows.push({
               isParent: false,
               isChild: true,
-              name: subName,
+              name: rawName.replace("Jumlah aset yang dimanfaatkan - ", ""),
               ...d
             });
           } else if (rawName.startsWith("Cross selling - ")) {
             if (!addedCrossSellingParent) {
-              subGroupRows.push({
-                isParent: true,
-                isChild: false,
-                name: "Cross selling",
-                id: "parent-cross-selling",
-              });
+              subGroupRows.push({ isParent: true, isChild: false, name: "Cross selling" });
               addedCrossSellingParent = true;
             }
-            const subName = rawName.replace("Cross selling - ", "");
             subGroupRows.push({
               isParent: false,
               isChild: true,
-              name: subName,
+              name: rawName.replace("Cross selling - ", ""),
               ...d
             });
           } else {
@@ -405,18 +432,37 @@ export default function LaporanPage() {
           }
         });
 
+        // Construct rows for this Pilar
+        const pilarRows: any[] = [];
+        // 1. Add Pilar Header Row
+        pilarRows.push([
+          {
+            content: pilarName.toUpperCase(),
+            colSpan: 6,
+            styles: {
+              fillColor: [240, 240, 240],
+              textColor: [0, 0, 0],
+              fontStyle: 'bold',
+              fontSize: 9,
+              halign: 'left',
+              cellPadding: 1.0,
+            }
+          }
+        ]);
+
+        // 2. Add Indicator Rows
         subGroupRows.forEach((row) => {
           let displayNo = "";
           if (row.isParent) {
-            globalIndex++;
-            displayNo = globalIndex.toString();
+            tempGlobalIndex++;
+            displayNo = tempGlobalIndex.toString();
           } else if (!row.isChild) {
-            globalIndex++;
-            displayNo = globalIndex.toString();
+            tempGlobalIndex++;
+            displayNo = tempGlobalIndex.toString();
           }
 
           if (row.isParent) {
-            tableRows.push([
+            pilarRows.push([
               displayNo,
               row.name,
               "",
@@ -426,127 +472,216 @@ export default function LaporanPage() {
             ]);
           } else {
             const displayName = row.isChild ? `      ${row.name}` : row.name;
-            tableRows.push([
+            pilarRows.push([
               displayNo,
               displayName,
-              row.targetValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }),
-              row.realisasiValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }),
-              `${Math.round(row.progress)}%`,
-              row.statusStr
+              row.targetValue !== undefined ? row.targetValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }) : "0",
+              row.realisasiValue !== undefined ? row.realisasiValue.toLocaleString("id-ID", { maximumFractionDigits: 0 }) : "0",
+              row.progress !== undefined ? `${Math.round(row.progress)}%` : "0%",
+              row.statusStr || "Belum Tercapai"
             ]);
           }
         });
+
+        // Calculate estimated height
+        // 1 Pilar header row takes ~4.5mm, each indicator row takes ~3.8mm under compact padding
+        const estimatedHeight = 4.5 + (pilarRows.length - 1) * 3.8;
+
+        // Check if it fits on current page (A4 limitY = 240 to allow space for headers and signatures)
+        const limitY = 240;
+        if (currentPageY + estimatedHeight > limitY && pages[currentPageIndex].pilars.length > 0) {
+          // Push to new page
+          pages.push({ pilars: [] });
+          currentPageIndex++;
+          currentPageY = 20; // Starts at top margin of new page
+        }
+
+        pages[currentPageIndex].pilars.push({
+          name: pilarName,
+          rows: pilarRows,
+          estimatedHeight
+        });
+
+        currentPageY += estimatedHeight + 2; // Add 2mm spacing between tables
       });
 
-      // 4. Render Table
-      autoTable(doc, {
-        startY: 65,
-        head: [[
-          { content: "No", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
-          { content: "Uraian KPI", styles: { halign: 'left', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
-          { content: `${getPdfTargetTitle()}`, styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
-          { content: `${getPdfRealisasiTitle()}`, styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
-          { content: "% Capaian", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } },
-          { content: "Status", styles: { halign: 'center', fillColor: [230, 230, 230], textColor: [0, 0, 0] } }
-        ]],
-        body: tableRows,
-        margin: { top: 20, bottom: 20, left: 20, right: 20 },
-        theme: 'grid',
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-          lineColor: [200, 200, 200],
-          lineWidth: 0.1,
-          font: "helvetica",
-          textColor: [0, 0, 0]
-        },
-        columnStyles: {
-          0: { cellWidth: 10, halign: 'center' }, // No
-          1: { cellWidth: 80, halign: 'left' },   // Uraian KPI
-          2: { cellWidth: 22, halign: 'center' }, // Target
-          3: { cellWidth: 22, halign: 'center' }, // Realisasi
-          4: { cellWidth: 18, halign: 'center' }, // % Capaian
-          5: { cellWidth: 18, halign: 'center', fontStyle: 'bold' }  // Status
-        },
-        didParseCell: function (data) {
-          if (data.row.index >= 0) {
-            const isPilarHeader = (data.row.cells[0]?.raw as any)?.colSpan === 6;
-            if (isPilarHeader) return;
+      // 4. Render tables page-by-page
+      let globalIndex = 0;
+      let isFirstPage = true;
 
-            const isChild = data.column.index === 1 && data.cell.text[0]?.startsWith("      ");
-            if (isChild) {
-              data.cell.styles.textColor = [100, 100, 100];
+      for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+        const pageGroup = pages[pIdx];
+        if (!isFirstPage) {
+          doc.addPage();
+        }
+
+        let currentY = isFirstPage ? 64 : 20;
+
+        for (let tIdx = 0; tIdx < pageGroup.pilars.length; tIdx++) {
+          const pilar = pageGroup.pilars[tIdx];
+          
+          // Re-generate rows with the proper global index
+          const finalRows: any[] = [];
+          
+          // Add Pilar Header Row
+          finalRows.push(pilar.rows[0]);
+
+          // Build rows with correct globalIndex
+          const startIdx = 1;
+          for (let r = startIdx; r < pilar.rows.length; r++) {
+            const originalRow = pilar.rows[r];
+            const isParent = originalRow[2] === "" && originalRow[3] === "" && originalRow[4] === "" && originalRow[5] === "";
+            const isChild = originalRow[1].startsWith("      ");
+
+            let displayNo = "";
+            if (isParent || !isChild) {
+              globalIndex++;
+              displayNo = globalIndex.toString();
             }
 
-            if (data.column.index === 5) {
-              const statusText = data.cell.text[0];
-              if (statusText === "Tercapai") {
-                data.cell.styles.textColor = [0, 128, 0];
-              } else if (statusText === "Hampir Tercapai") {
-                data.cell.styles.textColor = [180, 120, 0];
-              } else if (statusText === "Belum Tercapai") {
-                data.cell.styles.textColor = [180, 0, 0];
+            finalRows.push([
+              displayNo,
+              originalRow[1],
+              originalRow[2],
+              originalRow[3],
+              originalRow[4],
+              originalRow[5]
+            ]);
+          }
+
+          // Render this Pilar's table
+          autoTable(doc, {
+            startY: currentY,
+            head: tIdx === 0 ? [[
+              { content: "NO", styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } },
+              { content: "URAIAN KPI", styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } },
+              { content: getPdfTargetTitleUppercase(), styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } },
+              { content: getPdfRealisasiTitleUppercase(), styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } },
+              { content: "% CAPAIAN", styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } },
+              { content: "STATUS", styles: { halign: 'center', valign: 'middle', fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 9 } }
+            ]] : undefined,
+            body: finalRows,
+            margin: { top: 15, bottom: 15, left: 20, right: 20 },
+            theme: 'grid',
+            styles: {
+              fontSize: 9,
+              cellPadding: { top: 0.8, bottom: 0.8, left: 1.2, right: 1.2 },
+              lineColor: [200, 200, 200],
+              lineWidth: 0.1,
+              font: "times",
+              textColor: [0, 0, 0]
+            },
+            columnStyles: {
+              0: { cellWidth: 7, halign: 'center', valign: 'middle' }, // No
+              1: { cellWidth: 65, halign: 'left', valign: 'middle' },   // Uraian KPI
+              2: { cellWidth: 24, halign: 'center', valign: 'middle' }, // Target
+              3: { cellWidth: 24, halign: 'center', valign: 'middle' }, // Realisasi
+              4: { cellWidth: 22, halign: 'center', valign: 'middle' }, // % Capaian
+              5: { cellWidth: 28, halign: 'center', valign: 'middle', fontStyle: 'bold' }  // Status
+            },
+            didParseCell: function (data) {
+              if (data.row.index >= 0) {
+                const isPilarHeader = (data.row.cells[0]?.raw as any)?.colSpan === 6;
+                if (isPilarHeader) return;
+
+                const isChild = data.column.index === 1 && data.cell.text[0]?.startsWith("      ");
+                if (isChild) {
+                  data.cell.styles.textColor = [100, 100, 100];
+                }
+
+                if (data.column.index === 5) {
+                  const statusText = data.cell.text[0];
+                  if (statusText === "Tercapai") {
+                    data.cell.styles.textColor = [0, 128, 0];
+                  } else if (statusText === "Hampir Tercapai") {
+                    data.cell.styles.textColor = [180, 120, 0];
+                  } else if (statusText === "Belum Tercapai") {
+                    data.cell.styles.textColor = [180, 0, 0];
+                  }
+                }
               }
             }
-          }
-        },
-        didDrawPage: function (data) {
-          // Top mini header on pages after the first
-          if (data.pageNumber > 1) {
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(7.5);
-            doc.setTextColor(100);
-            doc.text("Laporan KPI UOBK RSUD Al-Mulk Kota Sukabumi", 20, 12);
-            doc.setLineWidth(0.1);
-            doc.line(20, 13, 190, 13);
-          }
-        }
-      });
+          });
 
-      // 5. Signature Block Page Allocation
+          currentY = (doc as any).lastAutoTable.finalY + 2;
+        }
+
+        isFirstPage = false;
+      }
+
+      // 5. Signature Block Page Allocation (requires ~47mm on A4)
       let finalY = (doc as any).lastAutoTable.finalY || 100;
-      if (finalY + 55 > 280) {
+      if (finalY + 47 > 280) {
         doc.addPage();
         finalY = 20;
       }
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
+      const signatureStartY = finalY + 5; // Spaced beautifully below the table (exactly 5mm)
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
       doc.setTextColor(0);
 
-      doc.text("Mengetahui,", 30, finalY + 15);
+      // Get Indonesian dynamic date for the download
+      const getIndonesianDateString = () => {
+        const months = [
+          "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+          "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+        const dateObj = new Date();
+        const day = dateObj.getDate();
+        const month = months[dateObj.getMonth()];
+        const year = dateObj.getFullYear();
+        return `Sukabumi, ${day} ${month} ${year}`;
+      };
+      const formattedDateStr = getIndonesianDateString();
 
-      doc.setFont("helvetica", "bold");
-      doc.text("WALI KOTA SUKABUMI,", 30, finalY + 20);
+      // Left Column (Mengetahui Wali Kota Sukabumi)
+      doc.text("Mengetahui,", 65, signatureStartY, { align: "center" });
+      doc.setFont("times", "bold");
+      doc.text("WALI KOTA SUKABUMI,", 65, signatureStartY + 5, { align: "center" });
 
-      const titleLines = doc.splitTextToSize("DIREKTUR UOBK RSUD AL-MULK\nKOTA SUKABUMI,", 70);
-      doc.text(titleLines, 120, finalY + 20);
+      // Right Column (Date, Direktur UOBK RSUD Al-Mulk Kota Sukabumi)
+      doc.setFont("times", "normal");
+      doc.text(formattedDateStr, 150, signatureStartY, { align: "center" });
+      doc.setFont("times", "bold");
+      doc.text("DIREKTUR UOBK RSUD AL-MULK", 150, signatureStartY + 5, { align: "center" });
+      doc.text("KOTA SUKABUMI,", 150, signatureStartY + 10, { align: "center" });
 
-      doc.setFont("helvetica", "bold");
-      doc.text("H. AYEP ZAKI", 30, finalY + 45);
+      // Names: placed at signatureStartY + 35 (approx 3.5 cm space is plenty for signature)
+      const nameY = signatureStartY + 35;
 
-      doc.text("Dr. Deni Purnama, S.Kep., MKM., FISQua", 120, finalY + 45);
+      // Left Name (H. AYEP ZAKI)
+      doc.setFont("times", "bold");
+      doc.text("H. AYEP ZAKI", 65, nameY, { align: "center" });
 
-      doc.setFont("helvetica", "normal");
-      doc.text("NIP. 198011092003121002", 120, finalY + 50);
+      // Right Name (Dr. Deni Purnama, S.Kep., MKM., FISQua)
+      const nameText = "Dr. Deni Purnama, S.Kep., MKM., FISQua";
+      doc.setFont("times", "bold");
+      doc.text(nameText, 150, nameY, { align: "center" });
+      
+      // Underline right name
+      const nameWidth = doc.getTextWidth(nameText);
+      doc.setLineWidth(0.3);
+      doc.line(150 - nameWidth / 2, nameY + 1, 150 + nameWidth / 2, nameY + 1);
 
-      // 6. Double-pass page number footer stamping
+      // Right NIP (NIP. 198011092003121002)
+      doc.setFont("times", "normal");
+      doc.text("NIP. 198011092003121002", 150, nameY + 6, { align: "center" });
+
+      // 6. Double-pass header stamping for pages > 1 (no page number footer as requested)
       const pageCount = doc.internal.pages.length - 1;
-      const printedDateStr = new Date().toLocaleDateString("id-ID", {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
-      const printedTimeStr = new Date().toLocaleTimeString("id-ID", {
-        hour: '2-digit', minute: '2-digit'
-      });
-
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(120);
-
-        doc.text(`Dicetak: ${printedDateStr}, ${printedTimeStr} oleh Petugas RSUD Al-Mulk`, 20, 287);
-        doc.text(`Halaman ${i} dari ${pageCount}`, 190, 287, { align: "right" });
+        // Draw top mini header for pages > 1
+        if (i > 1) {
+          doc.setFont("times", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(100);
+          doc.text("Laporan KPI UOBK RSUD Al-Mulk Kota Sukabumi", 25, 12);
+          doc.setLineWidth(0.1);
+          doc.line(25, 13, 190, 13);
+        }
       }
 
       // Save PDF
@@ -702,29 +837,33 @@ export default function LaporanPage() {
       {/* B. Card Tabel Laporan */}
       <div className="rounded-2xl glassmorphism border border-white/5 overflow-hidden print:border-none print:shadow-none print:bg-transparent">
         <div className="p-6 md:p-8 border-b border-white/5 bg-dark-navy/40 print:bg-transparent print:border-none">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-center w-full max-w-4xl mx-auto">
-            <div className="w-[96px] h-[75px] flex items-center justify-center shrink-0 print:bg-transparent overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center w-full max-w-4xl mx-auto">
+            <div className="w-[80px] h-[62px] sm:w-[96px] sm:h-[75px] flex items-center justify-center shrink-0 print:bg-transparent overflow-hidden">
               {logoUrl ? (
                 <img 
                   src={logoUrl} 
                   alt="Logo" 
-                  className="w-[96px] h-[75px] object-contain ml-0 pb-0 mb-0 pt-[1px] pl-0 pr-0 mr-0" 
+                  className="max-w-full max-h-full object-contain" 
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                     (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                   }} 
                 />
               ) : null}
-              <Activity className={`w-[75px] h-[75px] text-primary-cyan print:text-black ${logoUrl ? 'hidden' : ''}`} />
+              <Activity className={`w-12 h-12 sm:w-[75px] sm:h-[75px] text-primary-cyan print:text-black ${logoUrl ? 'hidden' : ''}`} />
             </div>
-            <div className="flex flex-col items-center justify-center flex-1 max-w-2xl h-auto md:h-[90px] w-full md:w-[656px] m-0 p-0 gap-1 md:gap-0">
-              <h2 className="text-sm sm:text-base md:text-[25px] font-bold text-white uppercase tracking-wider print:text-black text-center h-auto md:h-[28.5px] leading-tight">LAPORAN KEY PERFORMANCE INDICATOR (KPI)</h2>
-              <h3 className="text-sm sm:text-base md:text-[25px] font-bold text-white uppercase tracking-wide mt-1 print:text-black text-center h-auto md:h-[28.5px] leading-tight">UOBK RSUD AL-MULK KOTA SUKABUMI</h3>
-              <p className="text-xs sm:text-sm md:text-[20px] font-semibold text-primary-cyan mt-[5px] uppercase print:text-black text-center h-auto md:h-[28px] leading-tight">
+            <div className="flex flex-col items-center justify-center flex-1 max-w-2xl py-2">
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-white uppercase tracking-wider print:text-black text-center leading-tight">
+                LAPORAN KEY PERFORMANCE INDICATOR (KPI)
+              </h2>
+              <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-300 uppercase tracking-wide mt-1.5 print:text-black text-center leading-tight">
+                UOBK RSUD AL-MULK KOTA SUKABUMI
+              </h3>
+              <p className="text-xs sm:text-sm md:text-base font-semibold text-primary-cyan mt-2 uppercase print:text-black text-center leading-tight">
                 PERIODE {getPeriodeString()}
               </p>
             </div>
-            <div className="w-[96px] h-[75px] shrink-0 hidden md:block"></div> {/* Spacer for perfect centering */}
+            <div className="w-[80px] h-[62px] sm:w-[96px] sm:h-[75px] shrink-0 hidden sm:block"></div> {/* Spacer for perfect centering */}
           </div>
         </div>
 
@@ -732,20 +871,20 @@ export default function LaporanPage() {
           <table className="w-full text-left border-collapse print:text-xs min-w-[800px]">
             <thead className="sticky top-0 bg-dark-navy/95 backdrop-blur-sm z-10 print:static print:bg-transparent shadow-sm">
               <tr className="border-b border-white/10 print:border-black uppercase">
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[5%] text-center text-[12px] border-r border-white/10">NO</th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[40%] text-center text-[12px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[5%] text-center text-[10px] border-r border-white/10">NO</th>
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black w-[40%] text-center text-[10px] border-r border-white/10">
                   URAIAN KPI
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[11px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[10px] border-r border-white/10">
                   {getTargetTitle()}
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[11px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[10px] border-r border-white/10">
                   {getRealisasiTitle()}
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[12px] border-r border-white/10">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[10px] border-r border-white/10">
                   % CAPAIAN
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[12px]">
+                <th className="py-4 px-4 font-semibold text-gray-300 print:text-black text-center text-[10px]">
                   STATUS
                 </th>
               </tr>
