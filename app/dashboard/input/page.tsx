@@ -617,27 +617,27 @@ export default function InputKpiPage() {
                                   {rowItem.name}
                                 </td>
                                 <td className="px-3 py-3 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all text-gray-500 w-24 min-w-[96px] max-w-[96px]">
-                                  -
+                                  
                                 </td>
                                 <td className="px-3 py-2 text-center border-r border-white/10 bg-[#24133d] group-hover:bg-[#2f1b4d] transition-all w-[210px] min-w-[210px] max-w-[210px]">
-                                  -
+                                  
                                 </td>
                                 {MONTHS.map((_, mIdx) => (
                                   <td
                                     key={mIdx}
                                     className={`px-2 py-2 border-r border-white/10 text-center text-gray-500 font-mono min-w-[165px] w-40 ${mIdx % 2 === 0 ? "bg-[#291745]" : "bg-[#201038]"}`}
                                   >
-                                    -
+                                    
                                   </td>
                                 ))}
                                 <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-semibold text-gray-500 bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[140px] w-40">
-                                  -
+                                  
                                 </td>
                                 <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-bold text-gray-500 bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[90px] w-24">
-                                  -
+                                  
                                 </td>
                                 <td className="px-3 py-3 text-center bg-[#24133d] group-hover:bg-[#2f1b4d] min-w-[140px] w-40">
-                                  -
+                                  
                                 </td>
                               </tr>
                             );

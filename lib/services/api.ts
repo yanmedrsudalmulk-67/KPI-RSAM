@@ -249,6 +249,28 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
   return result;
 }
 
+export async function getAllDataForAnalytics() {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+  const { data, error } = await supabase!
+    .from('indikator_kpi')
+    .select('*, capaian_kpi(*)')
+    .order('id', { ascending: true });
+  if (error) throw error;
+  
+  return (data || []).map(ind => {
+    let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator === "Jumlah PPPK/PWTHL yang dapat ditampung") {
+      nama_indikator = "Jumlah PPPKPW/THL yang dapat ditampung";
+    }
+    return {
+      ...ind,
+      nama_indikator
+    };
+  });
+}
+
 export async function getCapaianSummary() {
   if (!isSupabaseConfigured()) {
     return [];
@@ -435,3 +457,61 @@ export async function saveCapaian(data: Partial<CapaianKPI>) {
 
   return updateData[0];
 }
+
+export async function getDashboardSummaryText(tahun: number, periode: string): Promise<string | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  try {
+    const { data, error } = await supabase!
+      .from('dashboard_summary')
+      .select('summary_text')
+      .eq('tahun', tahun)
+      .eq('periode', periode)
+      .single();
+
+    if (error) {
+      console.warn("Could not fetch summary text (table might not exist yet):", error);
+      return null;
+    }
+    return data?.summary_text || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+export async function saveDashboardSummaryText(tahun: number, periode: string, text: string) {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  try {
+    const { data: existing, error: fetchErr } = await supabase!
+      .from('dashboard_summary')
+      .select('id')
+      .eq('tahun', tahun)
+      .eq('periode', periode)
+      .single();
+
+    if (fetchErr && fetchErr.code !== 'PGRST116') {
+      // PGRST116 = no rows returned
+      console.error("Error checking existing summary:", fetchErr);
+    }
+
+    if (existing) {
+      const { error: updateErr } = await supabase!
+        .from('dashboard_summary')
+        .update({ summary_text: text, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      if (updateErr) throw updateErr;
+    } else {
+      const { error: insertErr } = await supabase!
+        .from('dashboard_summary')
+        .insert([{ tahun, periode, summary_text: text, updated_at: new Date().toISOString() }]);
+      if (insertErr) throw insertErr;
+    }
+  } catch (err) {
+    console.error("Failed to save dashboard summary to Supabase:", err);
+    throw err;
+  }
+}
+

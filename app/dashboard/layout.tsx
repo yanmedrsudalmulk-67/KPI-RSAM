@@ -72,17 +72,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             isCollapsed={isCollapsed}
           />
           <NavItem 
-            href="/dashboard/laporan" 
-            icon={<FileOutput />} 
-            label="Laporan" 
-            active={pathname === "/dashboard/laporan"} 
-            isCollapsed={isCollapsed}
-          />
-          <NavItem 
             href="/dashboard/grafik" 
             icon={<BarChart3 />} 
             label="Grafik Analytics" 
             active={pathname === "/dashboard/grafik"} 
+            isCollapsed={isCollapsed}
+          />
+          <NavItem 
+            href="/dashboard/laporan" 
+            icon={<FileOutput />} 
+            label="Laporan" 
+            active={pathname === "/dashboard/laporan"} 
             isCollapsed={isCollapsed}
           />
           <NavItem 
