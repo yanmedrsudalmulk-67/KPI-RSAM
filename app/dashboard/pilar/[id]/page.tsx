@@ -55,6 +55,44 @@ const formatIndicatorName = (name: string) => {
   return <span className="text-white font-semibold text-[12px] sm:text-xs leading-normal">{name}</span>;
 };
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const targetVal = payload.find((p: any) => p.name === "Target" || p.dataKey === "Target")?.value;
+    const realisasiVal = payload.find((p: any) => p.name === "Realisasi" || p.dataKey === "Realisasi")?.value;
+    const status = data.status || "Belum Ada Data";
+    
+    return (
+      <div className="bg-[#1A233A]/95 border border-white/10 rounded-xl p-4 shadow-2xl space-y-2 backdrop-blur-md">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{label}</p>
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-gray-300">Target:</span>
+            <span className="font-mono font-bold text-blue-400">{targetVal}%</span>
+          </div>
+          <div className="flex items-center justify-between gap-8">
+            <span className="text-gray-300">Realisasi:</span>
+            <span className="font-mono font-bold text-green-400">
+              {status === "Tersedia" ? `${realisasiVal}%` : "0%"}
+            </span>
+          </div>
+          <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-8">
+            <span className="text-xs text-gray-400">Status:</span>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase border ${
+              status === "Tersedia" 
+                ? "bg-primary-green/10 text-primary-green border-primary-green/20" 
+                : "bg-primary-pink/10 text-primary-pink border-primary-pink/20"
+            }`}>
+              {status}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function PilarDetail({
   params,
 }: {
@@ -284,36 +322,32 @@ export default function PilarDetail({
         ? Number(capaian.target_bulanan)
         : targetBulananDefault;
 
-      const hasInputtedRealisasi = capaian && capaian.dokumen_url !== null;
+      const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
+      const hasRealisasi = !!capaian && capaian.dokumen_url !== null;
 
-      let realisasiPercentage = null;
-      if (hasInputtedRealisasi) {
-        const realisasiValue = Number(capaian.realisasi || 0);
-        if (isLhpBpk) {
-          if (targetBulananValue === 0 && realisasiValue === 0) {
-            realisasiPercentage = 100;
-          } else if (targetBulananValue === 0 && realisasiValue > 0) {
-            realisasiPercentage = 100;
-          } else if (targetBulananValue > 0) {
-            realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
-          } else {
-            realisasiPercentage = 100;
-          }
+      let realisasiPercentage = 0;
+      let status = "Belum Ada Data";
+
+      if (hasRealisasi) {
+        status = "Tersedia";
+        if (targetBulananValue === 0 && realisasiValue === 0) {
+          realisasiPercentage = 100;
+        } else if (targetBulananValue === 0 && realisasiValue > 0) {
+          realisasiPercentage = 100;
+        } else if (targetBulananValue > 0) {
+          realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
         } else {
-          if (targetBulananValue > 0) {
-            realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
-          } else {
-            realisasiPercentage = 0;
-          }
+          realisasiPercentage = 100;
         }
       }
 
-      const targetPercentage = isLhpBpk ? 100 : (targetBulananValue > 0 ? 100 : 0);
+      const targetPercentage = 100;
 
       data.push({
         name: months[i - 1],
         Target: targetPercentage,
         Realisasi: realisasiPercentage,
+        status: status,
         dokumen_url: capaian ? capaian.dokumen_url : null,
       });
     }
@@ -690,15 +724,7 @@ export default function PilarDetail({
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
                     tickFormatter={(val) => `${val}%`}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1A233A",
-                      border: "1px solid #ffffff10",
-                      borderRadius: "12px",
-                    }}
-                    itemStyle={{ fontWeight: "bold" }}
-                    formatter={(value: any, name: any) => [`${value}%`, name]}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Bar
                     dataKey="Target"
@@ -753,15 +779,7 @@ export default function PilarDetail({
                     tick={{ fill: "#ffffff80", fontSize: 12 }}
                     tickFormatter={(val) => `${val}%`}
                   />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1A233A",
-                      border: "1px solid #ffffff10",
-                      borderRadius: "12px",
-                    }}
-                    itemStyle={{ fontWeight: "bold" }}
-                    formatter={(value: any, name: any) => [`${value}%`, name]}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
                   <Line
                     type="monotone"
@@ -860,12 +878,9 @@ export default function PilarDetail({
                       </>
                     )}
                   </div>
-                  <div className="bg-black/40 p-4 border-t border-white/5">
-                    <p className="text-xs text-gray-400 font-medium mb-1">
-                      {doc.indicatorName.length > 50 ? doc.indicatorName.substring(0, 50) + "..." : doc.indicatorName}
-                    </p>
-                    <p className="text-sm text-white font-semibold">
-                      Dokumen Bulan {doc.month}
+                  <div className="bg-black/40 p-4 border-t border-white/5 flex items-center min-h-[64px]">
+                    <p className="text-sm text-white font-medium line-clamp-2" title={doc.indicatorName}>
+                      {doc.indicatorName}
                     </p>
                   </div>
                 </div>

@@ -139,22 +139,14 @@ export default function LaporanPage() {
       let status = "Belum Tercapai";
       const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
-      if (isLhpBpk) {
-        if (targetValue === 0 && realisasiValue === 0) {
-          progress = 100;
-        } else if (targetValue === 0 && realisasiValue > 0) {
-          progress = 100;
-        } else if (targetValue > 0) {
-          progress = (realisasiValue / targetValue) * 100;
-        } else {
-          progress = 100;
-        }
+      if (targetValue === 0 && realisasiValue === 0) {
+        progress = 100;
+      } else if (targetValue === 0 && realisasiValue > 0) {
+        progress = 100;
+      } else if (targetValue > 0) {
+        progress = (realisasiValue / targetValue) * 100;
       } else {
-        if (targetValue > 0) {
-          progress = (realisasiValue / targetValue) * 100;
-        } else if (targetTahunan > 0) {
-          progress = 0;
-        }
+        progress = 100;
       }
 
       if (progress >= 100) status = "Tercapai";
@@ -165,7 +157,7 @@ export default function LaporanPage() {
         ...ind,
         targetValue,
         realisasiValue,
-        progress: progress > 100 ? 100 : progress,
+        progress: progress,
         statusStr: status,
       };
     });

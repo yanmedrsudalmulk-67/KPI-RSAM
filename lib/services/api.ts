@@ -86,28 +86,26 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
     
     const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
-    let hasInputtedRealisasi = false;
-
+    let hasRealisasi = false;
+    
     if (targetBulan === 0) {
       // Mode Tahunan
-      const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear);
-      hasInputtedRealisasi = filteredCapaianKpi.some((c: any) => c.dokumen_url !== null);
-      totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => {
-        const isInput = c.dokumen_url !== null;
-        return sum + (isInput ? Number(c.realisasi || 0) : 0);
-      }, 0);
+      const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear && c.dokumen_url !== null);
+      totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => sum + Number(c.realisasi || 0), 0);
       totalTarget = Number(ind.target_tahunan || 0);
+      hasRealisasi = filteredCapaianKpi.length > 0;
 
-      if (filteredCapaianKpi.length > 0) {
-        const sorted = [...filteredCapaianKpi].sort((a: any, b: any) => b.bulan - a.bulan);
+      const allFiltered = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear);
+      if (allFiltered.length > 0) {
+        const sorted = [...allFiltered].sort((a: any, b: any) => b.bulan - a.bulan);
         latestCapaian = sorted[0];
       }
     } else {
       // Mode Bulanan
       const capaian = (ind.capaian_kpi || []).find((c: any) => c.tahun === targetYear && c.bulan === targetBulan);
       latestCapaian = capaian || null;
-      hasInputtedRealisasi = capaian && capaian.dokumen_url !== null;
-      totalRealisasi = hasInputtedRealisasi ? Number(capaian.realisasi || 0) : 0;
+      hasRealisasi = !!capaian && capaian.dokumen_url !== null;
+      totalRealisasi = hasRealisasi ? Number(capaian.realisasi || 0) : 0;
       
       if (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null) {
         totalTarget = Number(capaian.target_bulanan);
@@ -119,30 +117,15 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
     let progress = 0;
     let status = "Belum tercapai";
 
-    if (hasInputtedRealisasi) {
-      if (isLhpBpk) {
-        if (totalTarget === 0 && totalRealisasi === 0) {
-          progress = 100;
-        } else if (totalTarget === 0 && totalRealisasi > 0) {
-          progress = 100;
-        } else if (totalTarget > 0) {
-          progress = (totalRealisasi / totalTarget) * 100;
-        } else {
-          progress = 100;
-        }
-        if (progress > 100) progress = 100;
+    if (hasRealisasi) {
+      if (totalTarget === 0 && totalRealisasi === 0) {
+        progress = 100;
+      } else if (totalTarget === 0 && totalRealisasi > 0) {
+        progress = 100;
+      } else if (totalTarget > 0) {
+        progress = (totalRealisasi / totalTarget) * 100;
       } else {
-        if (totalTarget > 0) {
-           progress = (totalRealisasi / totalTarget) * 100;
-           if (progress > 100) progress = 100; // Cap at 100% per indicator
-        } else {
-           const targetTahunan = Number(ind.target_tahunan || 0);
-           if (targetTahunan > 0) {
-             progress = 0;
-           } else {
-             progress = 100; // default to 100 if no target exists
-           }
-        }
+        progress = 100;
       }
     } else {
       progress = 0;
@@ -150,6 +133,7 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
 
     if (progress >= 100) status = "Tercapai";
     else if (progress >= 80) status = "Perlu perhatian";
+    else status = "Belum tercapai";
 
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
 
@@ -223,25 +207,21 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
     pilarIndicators.forEach(ind => {
       let totalTarget = 0;
       let totalRealisasi = 0;
+      let hasRealisasi = false;
       
       const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
-      let hasInputtedRealisasi = false;
-
       if (bulan === 0) {
         // Mode Tahunan
-        const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === tahun);
-        hasInputtedRealisasi = filteredCapaianKpi.some((c: any) => c.dokumen_url !== null);
-        totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => {
-          const isInput = c.dokumen_url !== null;
-          return sum + (isInput ? Number(c.realisasi || 0) : 0);
-        }, 0);
+        const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === tahun && c.dokumen_url !== null);
+        totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => sum + Number(c.realisasi || 0), 0);
         totalTarget = Number(ind.target_tahunan || 0);
+        hasRealisasi = filteredCapaianKpi.length > 0;
       } else {
         // Mode Bulanan
         const capaian = ind.capaian_kpi?.find((c: any) => c.tahun === tahun && c.bulan === bulan);
-        hasInputtedRealisasi = capaian && capaian.dokumen_url !== null;
-        totalRealisasi = hasInputtedRealisasi ? Number(capaian.realisasi || 0) : 0;
+        hasRealisasi = !!capaian && capaian.dokumen_url !== null;
+        totalRealisasi = hasRealisasi ? Number(capaian.realisasi || 0) : 0;
         
         if (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null) {
           totalTarget = Number(capaian.target_bulanan);
@@ -252,30 +232,15 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
 
       let progress = 0;
 
-      if (hasInputtedRealisasi) {
-        if (isLhpBpk) {
-          if (totalTarget === 0 && totalRealisasi === 0) {
-            progress = 100;
-          } else if (totalTarget === 0 && totalRealisasi > 0) {
-            progress = 100;
-          } else if (totalTarget > 0) {
-            progress = (totalRealisasi / totalTarget) * 100;
-          } else {
-            progress = 100;
-          }
-          if (progress > 100) progress = 100;
+      if (hasRealisasi) {
+        if (totalTarget === 0 && totalRealisasi === 0) {
+          progress = 100;
+        } else if (totalTarget === 0 && totalRealisasi > 0) {
+          progress = 100;
+        } else if (totalTarget > 0) {
+          progress = (totalRealisasi / totalTarget) * 100;
         } else {
-          if (totalTarget > 0) {
-             progress = (totalRealisasi / totalTarget) * 100;
-             if (progress > 100) progress = 100;
-          } else {
-             const targetTahunan = Number(ind.target_tahunan || 0);
-             if (targetTahunan > 0) {
-               progress = 0;
-             } else {
-               progress = 100; // default to 100 if no target exists
-             }
-          }
+          progress = 100;
         }
       } else {
         progress = 0;

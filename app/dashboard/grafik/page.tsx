@@ -176,7 +176,8 @@ export default function GrafikPage() {
         targetValue = targetTahunan;
       }
 
-      realisasiValue = capaians.reduce((sum: number, c: any) => sum + Number(c.realisasi || 0), 0);
+      realisasiValue = capaians.reduce((sum: number, c: any) => sum + (c.dokumen_url !== null ? Number(c.realisasi || 0) : 0), 0);
+      const hasRealisasi = capaians.some((c: any) => c.dokumen_url !== null);
 
       // If not monthly specific override, calculate target properly if it's accumulated
       if (filterPeriode === "Tahunan" || filterPeriode.startsWith("Semester") || filterPeriode.startsWith("Q")) {
@@ -197,15 +198,23 @@ export default function GrafikPage() {
       let progress = 0;
       let status = "Belum Tercapai";
       
-      if (targetValue > 0) {
-        progress = (realisasiValue / targetValue) * 100;
-        if (progress > 100) progress = 100;
-        if (progress >= 100) status = "Tercapai";
-        else if (progress >= 80) status = "Perlu Perhatian";
-      } else if (targetTahunan > 0) {
+      if (hasRealisasi) {
+        if (targetValue === 0 && realisasiValue === 0) {
+          progress = 100;
+        } else if (targetValue === 0 && realisasiValue > 0) {
+          progress = 100;
+        } else if (targetValue > 0) {
+          progress = (realisasiValue / targetValue) * 100;
+        } else {
+          progress = 100;
+        }
+      } else {
         progress = 0;
-        status = "Belum Tercapai";
       }
+
+      if (progress >= 100) status = "Tercapai";
+      else if (progress >= 80) status = "Perlu Perhatian";
+      else status = "Belum Tercapai";
 
       return {
         ...ind,
@@ -237,14 +246,14 @@ export default function GrafikPage() {
          currTarget += tTahunan;
          prevTarget += tTahunan;
          
-         currRealisasi += (ind.capaian_kpi || []).filter((c: any) => c.tahun === compareYear2).reduce((s: number, c: any) => s + Number(c.realisasi||0), 0);
-         prevRealisasi += (ind.capaian_kpi || []).filter((c: any) => c.tahun === compareYear1).reduce((s: number, c: any) => s + Number(c.realisasi||0), 0);
+         currRealisasi += (ind.capaian_kpi || []).filter((c: any) => c.tahun === compareYear2 && c.dokumen_url !== null).reduce((s: number, c: any) => s + Number(c.realisasi||0), 0);
+         prevRealisasi += (ind.capaian_kpi || []).filter((c: any) => c.tahun === compareYear1 && c.dokumen_url !== null).reduce((s: number, c: any) => s + Number(c.realisasi||0), 0);
       });
 
       return {
         name: pName,
-        [compareYear2]: currTarget > 0 ? Math.min(100, (currRealisasi/currTarget)*100) : 0,
-        [compareYear1]: prevTarget > 0 ? Math.min(100, (prevRealisasi/prevTarget)*100) : 0,
+        [compareYear2]: currTarget === 0 ? 100 : (currRealisasi / currTarget) * 100,
+        [compareYear1]: prevTarget === 0 ? 100 : (prevRealisasi / prevTarget) * 100,
       }
     });
   }, [data, compareYear1, compareYear2]);
@@ -257,18 +266,28 @@ export default function GrafikPage() {
        
        processedData.forEach(ind => {
          const capaian = ind.capaian_kpi?.find((c: any) => c.tahun === filterTahun && c.bulan === bulan);
+         const hasRealisasi = !!capaian && capaian.dokumen_url !== null;
          let targetBulanan = 0;
          if (capaian && capaian.target_bulanan !== null && capaian.target_bulanan !== undefined) {
            targetBulanan = Number(capaian.target_bulanan);
          } else {
            targetBulanan = Number(ind.target_tahunan || 0) / 12;
          }
-         let realisasiBulanan = capaian ? Number(capaian.realisasi || 0) : 0;
+         let realisasiBulanan = hasRealisasi ? Number(capaian.realisasi || 0) : 0;
 
          let progress = 0;
-         if (targetBulanan > 0) {
-           progress = (realisasiBulanan / targetBulanan) * 100;
-           if (progress > 100) progress = 100;
+         if (hasRealisasi) {
+           if (targetBulanan === 0 && realisasiBulanan === 0) {
+             progress = 100;
+           } else if (targetBulanan === 0 && realisasiBulanan > 0) {
+             progress = 100;
+           } else if (targetBulanan > 0) {
+             progress = (realisasiBulanan / targetBulanan) * 100;
+           } else {
+             progress = 100;
+           }
+         } else {
+           progress = 0;
          }
          totalProgress += progress;
        });
@@ -287,7 +306,7 @@ export default function GrafikPage() {
       const inds = processedData.filter(d => d.pilar === pName);
       const totalT = inds.reduce((s, d) => s + d.targetValue, 0);
       const totalR = inds.reduce((s, d) => s + d.realisasiValue, 0);
-      const prog = totalT > 0 ? Math.min(100, (totalR/totalT)*100) : 0;
+      const prog = totalT === 0 ? 100 : (totalR / totalT) * 100;
       return {
         name: pName,
         target: totalT,

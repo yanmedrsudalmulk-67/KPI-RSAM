@@ -244,18 +244,14 @@ export default function LaporanRealisasiPage() {
         : (isLhpBpk ? 0 : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0));
 
       let pct = 0;
-      if (isLhpBpk) {
-        if (targetBulanan === 0 && validValue === 0) {
-          pct = 100;
-        } else if (targetBulanan === 0 && validValue > 0) {
-          pct = 100;
-        } else if (targetBulanan > 0) {
-          pct = (validValue / targetBulanan) * 100;
-        } else {
-          pct = 100;
-        }
+      if (targetBulanan === 0 && validValue === 0) {
+        pct = 100;
+      } else if (targetBulanan === 0 && validValue > 0) {
+        pct = 100;
+      } else if (targetBulanan > 0) {
+        pct = (validValue / targetBulanan) * 100;
       } else {
-        pct = targetBulanan > 0 ? (validValue / targetBulanan) * 100 : 0;
+        pct = 100;
       }
 
       let status = "Belum tercapai";
@@ -773,21 +769,15 @@ export default function LaporanRealisasiPage() {
                         : (isLhpBpk ? 0 : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0));
 
                       let pct = 0;
-                      if (isLhpBpk) {
-                        if (targetBulananVal === 0 && validValue === 0) {
-                          pct = 100;
-                        } else if (targetBulananVal === 0 && validValue > 0) {
-                          pct = 100;
-                        } else if (targetBulananVal > 0) {
-                          pct = (validValue / targetBulananVal) * 100;
-                        } else {
-                          pct = 100;
-                        }
+                      if (targetBulananVal === 0 && validValue === 0) {
+                        pct = 100;
+                      } else if (targetBulananVal === 0 && validValue > 0) {
+                        pct = 100;
+                      } else if (targetBulananVal > 0) {
+                        pct = (validValue / targetBulananVal) * 100;
                       } else {
-                        pct = targetBulananVal > 0 ? (validValue / targetBulananVal) * 100 : 0;
+                        pct = 100;
                       }
-
-                      if (pct > 100) pct = 100;
 
                       let statusStr = "Belum Tercapai";
                       let statusColor = "text-primary-pink bg-primary-pink/10 border-primary-pink/20";
