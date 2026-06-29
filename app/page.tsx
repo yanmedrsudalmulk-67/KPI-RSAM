@@ -82,17 +82,26 @@ export default function LandingPage() {
         {/* Left Area - Text (Bottom Left Aligned) */}
         <div className="w-full md:w-[60%] flex-1 flex flex-col justify-end p-6 sm:p-10 md:p-12 lg:p-16 pb-12 sm:pb-12 md:pb-16 relative z-10">
           <div className="animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 fill-mode-both">
-            <h3 className="font-roboto-condensed font-medium text-blue-400 tracking-[0.2em] uppercase text-[10px] sm:text-xs mb-3 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+            <h3 
+              className="font-roboto-condensed font-medium text-blue-400 tracking-[0.2em] uppercase text-[10px] sm:text-xs mb-3"
+              style={{ textShadow: "1px 1px 0px #000, 2px 2px 4px rgba(0, 0, 0, 0.9), 0px 0px 10px rgba(59, 130, 246, 0.5)" }}
+            >
               Selamat Datang Di
             </h3>
 
-            <h1 className="text-[50px] font-black font-roboto-condensed mb-3 sm:mb-4 text-white leading-[1.05] tracking-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-white">
+            <h1 
+              className="text-[50px] font-black font-roboto-condensed mb-3 sm:mb-4 text-white leading-[1.05] tracking-tight border-white"
+              style={{ textShadow: "1px 1px 0px #000, 2px 2px 0px #000, 3px 3px 0px #000, 4px 4px 0px #000, 5px 5px 15px rgba(0, 0, 0, 0.9)" }}
+            >
               KEY PERFORMANCE
               <br />
               <span className="text-white">INDICATOR (KPI)</span>
             </h1>
 
-            <h2 className="text-[19px] font-bold tracking-wide text-[#8aed86] mb-3 sm:mb-4 drop-shadow-md border-l-4 border-blue-500 pl-3">
+            <h2 
+              className="text-[19px] font-bold tracking-wide text-[#8aed86] mb-3 sm:mb-4 border-l-4 border-blue-500 pl-3"
+              style={{ textShadow: "1px 1px 0px #000, 2px 2px 0px #000, 3px 3px 8px rgba(0, 0, 0, 0.9)" }}
+            >
               UOBK RSUD AL-MULK KOTA SUKABUMI
             </h2>
 
