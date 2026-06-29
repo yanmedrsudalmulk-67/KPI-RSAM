@@ -6,7 +6,6 @@ import {
   Save,
   Calendar,
   CheckCircle2,
-  AlertCircle,
   X,
   Edit3,
   Target,
@@ -87,7 +86,6 @@ export default function LaporanRealisasiPage() {
   const [inputFiles, setInputFiles] = useState<File[]>([]);
   const [dokumenUrls, setDokumenUrls] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [successMode, setSuccessMode] = useState(false);
   const [hasExistingData, setHasExistingData] = useState(false);
 
@@ -141,7 +139,7 @@ export default function LaporanRealisasiPage() {
     const s = (satuan || "").toLowerCase();
 
     if (s.includes("rupiah") || s.includes("rp")) {
-      let numStr = value.replace(/[^0-9]/g, "");
+      const numStr = value.replace(/[^0-9]/g, "");
       if (numStr) {
         return "Rp" + parseInt(numStr, 10).toLocaleString("id-ID");
       }
@@ -230,16 +228,27 @@ export default function LaporanRealisasiPage() {
         ? Number(currentCapaian.target_bulanan)
         : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0);
 
+      const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
       let pct = 0;
-      if (targetBulanan > 0) {
-        pct = (validValue / targetBulanan) * 100;
+      if (isLhpBpk) {
+        if (targetBulanan === 0 && validValue === 0) {
+          pct = 100;
+        } else if (targetBulanan === 0 && validValue > 0) {
+          pct = 100;
+        } else if (targetBulanan > 0) {
+          pct = (validValue / targetBulanan) * 100;
+        } else {
+          pct = 100;
+        }
+      } else {
+        pct = targetBulanan > 0 ? (validValue / targetBulanan) * 100 : 0;
       }
 
       let status = "Belum tercapai";
       if (pct >= 100) status = "Tercapai";
       else if (pct >= 80) status = "Perlu perhatian";
 
-      let finalDokumenUrls = [...dokumenUrls];
+      const finalDokumenUrls = [...dokumenUrls];
 
       if (isSupabaseConfigured() && inputFiles.length > 0) {
         for (const file of inputFiles) {
@@ -290,7 +299,7 @@ export default function LaporanRealisasiPage() {
       return;
     }
 
-    setIsDeleting(true);
+    setIsSaving(true);
     try {
       if (isSupabaseConfigured()) {
         await supabase!.from("capaian_kpi").delete().match({
@@ -305,7 +314,7 @@ export default function LaporanRealisasiPage() {
     } catch (e: any) {
       alert("Gagal menghapus data: " + e.message);
     } finally {
-      setIsDeleting(false);
+      setIsSaving(false);
     }
   };
 
@@ -831,6 +840,17 @@ export default function LaporanRealisasiPage() {
 
             {/* Modal Footer */}
             <div className="p-5 sm:p-6 pt-4 border-t border-white/10 flex flex-wrap gap-3 shrink-0">
+              {hasExistingData && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isSaving}
+                  className="px-4 py-3 rounded-xl border border-red-500/30 text-red-400 font-medium hover:bg-red-400/10 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Hapus
+                </button>
+              )}
+              
               <button
                 onClick={() => {
                   setInputRealisasi("");

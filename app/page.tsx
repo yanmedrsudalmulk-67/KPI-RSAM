@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Activity, HeartPulse } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import RSLogo from "@/components/RSLogo";

@@ -41,7 +41,7 @@ INSERT INTO pilar_kpi (id, nama_pilar, deskripsi) VALUES
 -- Seed Data for Indikator KPI
 INSERT INTO indikator_kpi (id, pilar_id, nama_indikator, satuan, target_tahunan, keterangan) VALUES
 -- Pilar 1
-(1, 1, 'Jumlah PPPK/PW yang dapat ditampung', 'Orang', 5, '4 Orang Perawat, 1 Orang tenaga IT'),
+(1, 1, 'Jumlah PPPKPW/THL yang dapat ditampung', 'Orang', 5, '4 Orang Perawat, 1 Orang tenaga IT'),
 -- Pilar 2
 (2, 2, 'Persentase penyelesaian LHP BPK', 'Persen', 100, ''),
 -- Pilar 3

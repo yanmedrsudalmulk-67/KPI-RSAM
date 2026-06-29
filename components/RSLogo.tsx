@@ -22,13 +22,13 @@ export default function RSLogo({ size = 'large' }: { size?: 'small' | 'large' })
             try {
               const parsed = JSON.parse(url);
               url = parsed.logo_url || '';
-            } catch (e) {
+            } catch {
               // ignore
             }
           }
           setLogoUrl(url || null);
         }
-      } catch (err) {
+      } catch {
         // Abaikan error, gunakan logo default
       }
     }

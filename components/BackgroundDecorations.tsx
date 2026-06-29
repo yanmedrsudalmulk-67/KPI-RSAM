@@ -10,7 +10,6 @@ export default function BackgroundDecorations() {
   const [welcomeBgVal, setWelcomeBgVal] = useState<string>("");
   const [menuBgType, setMenuBgType] = useState<string>("default");
   const [menuBgVal, setMenuBgVal] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
 
   const loadSettings = async () => {
     // 2. Cloud synchronization from Supabase
@@ -64,7 +63,7 @@ export default function BackgroundDecorations() {
               ) {
                 setMenuBgVal(parsed.menu_bg_val);
               }
-            } catch (innerErr) {
+            } catch {
               // ignore
             }
           }
@@ -102,7 +101,7 @@ export default function BackgroundDecorations() {
               ) {
                 setMenuBgVal(parsed.menu_bg_val);
               }
-            } catch (jsonErr) {
+            } catch {
               // ignore
             }
           }
@@ -114,7 +113,6 @@ export default function BackgroundDecorations() {
         );
       }
     }
-    setIsLoading(false);
   };
 
   useEffect(() => {

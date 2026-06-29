@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { pilarKpi as mockPilar, indicators as mockIndicators, chartData as mockChart } from './data';
+import { pilarKpi as mockPilar, indicators as mockIndicators } from './data';
 
 const isSupabaseConfigured = () => {
   return !!supabase;

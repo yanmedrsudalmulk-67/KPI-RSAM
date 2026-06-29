@@ -142,10 +142,12 @@ export default function PilarDetail({
                   website: parsed.social_media.website || ""
                 });
               }
-            } catch (e) {}
+            } catch {
+              // ignore
+            }
           }
-        } catch (e) {
-          console.error("Error fetching social media:", e);
+        } catch {
+          console.error("Error fetching social media");
         }
       }
 
@@ -283,9 +285,22 @@ export default function PilarDetail({
 
       const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
 
+      const isLhpBpk = selectedIndObj?.nama_indikator?.includes("LHP BPK") || selectedIndObj?.name?.includes("LHP BPK") || selectedIndObj?.uraian_kpi?.includes("LHP BPK");
       let realisasiPercentage = 0;
-      if (targetBulananValue > 0) {
-        realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+      if (isLhpBpk) {
+        if (targetBulananValue === 0 && realisasiValue === 0) {
+          realisasiPercentage = 100;
+        } else if (targetBulananValue === 0 && realisasiValue > 0) {
+          realisasiPercentage = 100;
+        } else if (targetBulananValue > 0) {
+          realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+        } else {
+          realisasiPercentage = 100;
+        }
+      } else {
+        if (targetBulananValue > 0) {
+          realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+        }
       }
 
       const targetPercentage = targetBulananValue > 0 ? 100 : 0;
@@ -304,6 +319,12 @@ export default function PilarDetail({
   const selectedMonthDocs = useMemo(() => {
     const docs: { id: string, month: string, url: string }[] = [];
     chartData.forEach((d, index) => {
+      // Filter by selected month if selectedGraphBulan is not 0 (Tahunan)
+      const monthIndex = index + 1; // index is 0-11, monthIndex is 1-12
+      if (selectedGraphBulan !== 0 && selectedGraphBulan !== monthIndex) {
+        return;
+      }
+
       if (d.dokumen_url) {
         try {
           const parsed = JSON.parse(d.dokumen_url);
@@ -322,7 +343,7 @@ export default function PilarDetail({
               url: d.dokumen_url,
             });
           }
-        } catch (e) {
+        } catch {
           docs.push({
             id: `${index}`,
             month: d.name,
@@ -332,7 +353,26 @@ export default function PilarDetail({
       }
     });
     return docs;
-  }, [chartData]);
+  }, [chartData, selectedGraphBulan]);
+
+  const selectedMonthNameName = useMemo(() => {
+    if (selectedGraphBulan === 0) return "Semua Bulan";
+    const monthNames = [
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
+    ];
+    return monthNames[selectedGraphBulan - 1] || "Semua Bulan";
+  }, [selectedGraphBulan]);
 
   if (loading && !pilar) {
     return (
@@ -350,10 +390,6 @@ export default function PilarDetail({
     ind.nama_indikator.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const totalTarget = indicators.reduce(
-    (sum, ind) => sum + Number(ind.target_tahunan || 0),
-    0,
-  );
   const totalProgress = indicators.reduce((sum, ind) => sum + ind.progress, 0);
   const avgProgress =
     indicators.length > 0 ? (totalProgress / indicators.length).toFixed(1) : 0;
@@ -554,6 +590,32 @@ export default function PilarDetail({
 
           <div className="flex flex-col sm:flex-row gap-3">
             <select
+              value={selectedGraphBulan}
+              onChange={(e) => setSelectedGraphBulan(parseInt(e.target.value))}
+              className="px-4 py-2 bg-dark-navy border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-cyan text-sm"
+            >
+              <option value="0">Semua Bulan (Tahunan)</option>
+              {[
+                { val: 1, name: "Januari" },
+                { val: 2, name: "Februari" },
+                { val: 3, name: "Maret" },
+                { val: 4, name: "April" },
+                { val: 5, name: "Mei" },
+                { val: 6, name: "Juni" },
+                { val: 7, name: "Juli" },
+                { val: 8, name: "Agustus" },
+                { val: 9, name: "September" },
+                { val: 10, name: "Oktober" },
+                { val: 11, name: "November" },
+                { val: 12, name: "Desember" },
+              ].map((m) => (
+                <option key={m.val} value={m.val}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={selectedGraphTahun}
               onChange={(e) => setSelectedGraphTahun(e.target.value)}
               className="px-4 py-2 bg-dark-navy border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-cyan text-sm"
@@ -731,11 +793,16 @@ export default function PilarDetail({
 
       {/* VISUALISASI DOKUMEN */}
       <div className="p-6 rounded-2xl glassmorphism mt-8">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-white font-poppins flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-primary-pink" />
-            BUKTI DOKUMEN REALISASI
-          </h2>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold text-white font-poppins flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-primary-pink" />
+              BUKTI DOKUMEN REALISASI
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">
+              Periode: <span className="text-primary-pink font-semibold">{selectedMonthNameName}</span> {selectedGraphTahun}
+            </p>
+          </div>
         </div>
 
         {selectedMonthDocs.length > 0 ? (
@@ -784,7 +851,7 @@ export default function PilarDetail({
             <h3 className="text-white font-medium mb-1">Belum ada dokumen</h3>
             <p className="text-sm text-gray-400 max-w-sm">
               Tidak ada dokumen realisasi yang dilampirkan untuk indikator ini
-              pada tahun {selectedGraphTahun}.
+              pada bulan {selectedMonthNameName} tahun {selectedGraphTahun}.
             </p>
           </div>
         )}

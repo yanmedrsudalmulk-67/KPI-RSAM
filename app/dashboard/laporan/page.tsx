@@ -9,7 +9,7 @@ import {
 import { getAllDataForAnalytics } from "@/lib/services/api";
 import { pilarKpi } from "@/lib/data";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
-import { motion, animate } from "motion/react";
+import { motion, animate, AnimatePresence } from "motion/react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -36,6 +36,18 @@ export default function LaporanPage() {
   const [filterPilar, setFilterPilar] = useState<string>("Semua");
   const [filterStatus, setFilterStatus] = useState<string>("Semua");
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [snackbar, setSnackbar] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showNoDataDialog, setShowNoDataDialog] = useState(false);
+
+  useEffect(() => {
+    if (snackbar) {
+      const timer = setTimeout(() => {
+        setSnackbar(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [snackbar]);
 
   useEffect(() => {
     async function loadData() {
@@ -125,11 +137,24 @@ export default function LaporanPage() {
 
       let progress = 0;
       let status = "Belum Tercapai";
-      
-      if (targetValue > 0) {
-        progress = (realisasiValue / targetValue) * 100;
-      } else if (targetTahunan > 0) {
-        progress = 0;
+      const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
+
+      if (isLhpBpk) {
+        if (targetValue === 0 && realisasiValue === 0) {
+          progress = 100;
+        } else if (targetValue === 0 && realisasiValue > 0) {
+          progress = 100;
+        } else if (targetValue > 0) {
+          progress = (realisasiValue / targetValue) * 100;
+        } else {
+          progress = 100;
+        }
+      } else {
+        if (targetValue > 0) {
+          progress = (realisasiValue / targetValue) * 100;
+        } else if (targetTahunan > 0) {
+          progress = 0;
+        }
       }
 
       if (progress >= 100) status = "Tercapai";
@@ -140,7 +165,7 @@ export default function LaporanPage() {
         ...ind,
         targetValue,
         realisasiValue,
-        progress: progress > 100 && targetValue > 0 ? 100 : progress,
+        progress: progress > 100 ? 100 : progress,
         statusStr: status,
       };
     });
@@ -270,7 +295,12 @@ export default function LaporanPage() {
   };
 
   const downloadPDF = async () => {
+    if (finalFilteredData.length === 0) {
+      setShowNoDataDialog(true);
+      return;
+    }
     setIsDownloadingPdf(true);
+    let downloadUrl: string | null = null;
     try {
       const doc = new jsPDF({
         orientation: "portrait",
@@ -684,10 +714,45 @@ export default function LaporanPage() {
         }
       }
 
-      // Save PDF
-      doc.save(`Laporan_KPI_RSUD_Al_Mulk_${filterJenisLaporan}_${getPeriodeString().replace(/\s+/g, '_')}.pdf`);
+      // Generate PDF as Blob
+      let pdfBlob;
+      try {
+        pdfBlob = doc.output("blob");
+      } catch (genErr) {
+        console.error("PDF generation error:", genErr);
+        setSnackbar({ message: "Gagal membuat file PDF.", type: "error" });
+        setIsDownloadingPdf(false);
+        return;
+      }
+
+      // Trigger download using Object URL and a temporary <a> tag
+      try {
+        const fileBlob = new Blob([pdfBlob], { type: "application/pdf" });
+        const fileName = `Laporan_KPI_RSUD_Al_Mulk_${filterJenisLaporan}_${getPeriodeString().replace(/\s+/g, '_')}.pdf`;
+        downloadUrl = URL.createObjectURL(fileBlob);
+
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        // Revoke after a short delay to allow browser to start the download
+        setTimeout(() => {
+          if (downloadUrl) {
+            URL.revokeObjectURL(downloadUrl);
+          }
+        }, 300);
+
+        setSnackbar({ message: "File PDF berhasil diunduh.", type: "success" });
+      } catch (dlErr) {
+        console.error("PDF download error:", dlErr);
+        setSnackbar({ message: "File PDF gagal diunduh. Silakan coba kembali.", type: "error" });
+      }
     } catch (err) {
       console.error("Error generating professional PDF:", err);
+      setSnackbar({ message: "Gagal membuat file PDF.", type: "error" });
     } finally {
       setIsDownloadingPdf(false);
     }
@@ -752,7 +817,7 @@ export default function LaporanPage() {
               ) : (
                 <FileText className="w-4 h-4 text-blue-400" />
               )}
-              {isDownloadingPdf ? "Generating PDF..." : "Download PDF"}
+              {isDownloadingPdf ? "Sedang membuat PDF..." : "Download PDF"}
             </button>
           </div>
         </div>
@@ -837,7 +902,7 @@ export default function LaporanPage() {
       {/* B. Card Tabel Laporan */}
       <div className="rounded-2xl glassmorphism border border-white/5 overflow-hidden print:border-none print:shadow-none print:bg-transparent">
         <div className="p-6 md:p-8 border-b border-white/5 bg-dark-navy/40 print:bg-transparent print:border-none">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center w-full max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-center sm:text-left w-full max-w-3xl mx-auto">
             <div className="w-[80px] h-[62px] sm:w-[96px] sm:h-[75px] flex items-center justify-center shrink-0 print:bg-transparent overflow-hidden">
               {logoUrl ? (
                 <img 
@@ -852,18 +917,17 @@ export default function LaporanPage() {
               ) : null}
               <Activity className={`w-12 h-12 sm:w-[75px] sm:h-[75px] text-primary-cyan print:text-black ${logoUrl ? 'hidden' : ''}`} />
             </div>
-            <div className="flex flex-col items-center justify-center flex-1 max-w-2xl py-2">
-              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-white uppercase tracking-wider print:text-black text-center leading-tight">
+            <div className="flex flex-col items-center sm:items-start justify-center py-2">
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-bold text-white uppercase tracking-wider print:text-black leading-tight">
                 LAPORAN KEY PERFORMANCE INDICATOR (KPI)
               </h2>
-              <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-300 uppercase tracking-wide mt-1.5 print:text-black text-center leading-tight">
+              <h3 className="text-xs sm:text-sm md:text-base lg:text-lg font-bold text-gray-300 uppercase tracking-wide mt-1.5 print:text-black leading-tight">
                 UOBK RSUD AL-MULK KOTA SUKABUMI
               </h3>
-              <p className="text-xs sm:text-sm md:text-base font-semibold text-primary-cyan mt-2 uppercase print:text-black text-center leading-tight">
+              <p className="text-xs sm:text-sm md:text-base font-semibold text-primary-cyan mt-2 uppercase print:text-black leading-tight">
                 PERIODE {getPeriodeString()}
               </p>
             </div>
-            <div className="w-[80px] h-[62px] sm:w-[96px] sm:h-[75px] shrink-0 hidden sm:block"></div> {/* Spacer for perfect centering */}
           </div>
         </div>
 
@@ -1057,6 +1121,65 @@ export default function LaporanPage() {
         <AnimatedStatCard title="Belum Tercapai" value={tBelum} suffix="" icon={<AlertTriangle className="w-5 h-5" />} color="text-primary-pink" bg="bg-primary-pink/10" border="border-primary-pink/20" />
         <AnimatedStatCard title="Rata-rata KPI" value={avgKPI} suffix="%" isFloat={true} icon={<Activity className="w-5 h-5" />} color="text-primary-purple" bg="bg-primary-purple/10" border="border-primary-purple/20" />
       </div>
+
+      {/* Snackbar/Toast notifications */}
+      <AnimatePresence>
+        {snackbar && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl border ${
+              snackbar.type === "success" 
+                ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-100" 
+                : "bg-rose-950/90 border-rose-500/30 text-rose-100"
+            } backdrop-blur-xl`}
+          >
+            <div className={`w-2 h-2 rounded-full ${snackbar.type === "success" ? "bg-emerald-400" : "bg-rose-400"}`} />
+            <span className="text-sm font-medium">{snackbar.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dialog for Empty Data */}
+      <AnimatePresence>
+        {showNoDataDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowNoDataDialog(false)}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
+            {/* Dialog Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              className="relative w-full max-w-md bg-slate-900/90 border border-white/10 rounded-2xl p-6 shadow-2xl backdrop-blur-md"
+            >
+              <div className="flex items-center gap-3 text-amber-400 mb-4">
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+                <h3 className="text-lg font-bold text-white">Tidak Ada Data</h3>
+              </div>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                Tidak ada data yang dapat dibuat menjadi laporan PDF. Silakan periksa kembali filter pencarian Anda atau masukkan data KPI terlebih dahulu.
+              </p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowNoDataDialog(false)}
+                  className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

@@ -1,7 +1,7 @@
 # Dependencies
 /node_modules
 /.pnpm-store
-/package-lock.json (if you prefer yarn or pnpm, but we keep it since we use npm)
+# /package-lock.json (if you prefer yarn or pnpm, but we keep it since we use npm)
 # Wait, actually, let's keep package-lock.json tracked! It's better to track lockfiles in Git.
 
 # Next.js Build Output

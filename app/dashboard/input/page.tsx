@@ -192,7 +192,12 @@ export default function InputKpiPage() {
         if (ind.capaians) {
           ind.capaians.forEach((c: any) => {
             const rawBulanan = (c.target_bulanan !== undefined && c.target_bulanan !== null) ? c.target_bulanan.toString() : "";
-            initial[`${ind.id}_${c.bulan}`] = formatValue(rawBulanan, ind.satuan || "");
+            const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
+            if (isLhpBpk) {
+              initial[`${ind.id}_${c.bulan}`] = rawBulanan;
+            } else {
+              initial[`${ind.id}_${c.bulan}`] = formatValue(rawBulanan, ind.satuan || "");
+            }
             initialIds[`${ind.id}_${c.bulan}`] = c.id;
             
             if (c.updated_at) {
@@ -271,10 +276,20 @@ export default function InputKpiPage() {
     satuan: string
   ) => {
     let formatted = value;
-    // We only format if it doesn't end with . or , to allow decimal typing
-    // Actually, formatValue handles it somewhat, but for persen it appends %
-    // Let's use formatValue
-    formatted = formatValue(value, satuan);
+    const ind = data.find((i) => i.id === indikatorId);
+    const isLhpBpk = ind?.nama_indikator?.includes("LHP BPK") || ind?.name?.includes("LHP BPK") || ind?.uraian_kpi?.includes("LHP BPK");
+    
+    if (isLhpBpk) {
+      // Plain numbers allowing decimals
+      let numStr = value.replace(/[^0-9.]/g, "");
+      const parts = numStr.split('.');
+      if (parts.length > 2) {
+        numStr = parts[0] + '.' + parts.slice(1).join('');
+      }
+      formatted = numStr;
+    } else {
+      formatted = formatValue(value, satuan);
+    }
     setInputs((prev) => ({ ...prev, [`${indikatorId}_${bulan}`]: formatted }));
   };
 
@@ -351,9 +366,22 @@ export default function InputKpiPage() {
             const existingCapaian = ind.capaians?.find((c: any) => c.bulan === b);
             const currentRealisasi = existingCapaian ? Number(existingCapaian.realisasi) : 0;
 
+            const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
             let pct = 0;
-            if (validValue > 0) {
-              pct = (currentRealisasi / validValue) * 100;
+            if (isLhpBpk) {
+              if (validValue === 0 && currentRealisasi === 0) {
+                pct = 100;
+              } else if (validValue === 0 && currentRealisasi > 0) {
+                pct = 100;
+              } else if (validValue > 0) {
+                pct = (currentRealisasi / validValue) * 100;
+              } else {
+                pct = 100;
+              }
+            } else {
+              if (validValue > 0) {
+                pct = (currentRealisasi / validValue) * 100;
+              }
             }
 
             let status = "Belum tercapai";
@@ -653,10 +681,16 @@ export default function InputKpiPage() {
                           }
 
                           const currentTargetVal = parseRawValue(targets[ind.id] || "");
-                          let progress =
-                            currentTargetVal > 0
-                              ? (totalTargetBulanan / currentTargetVal) * 100
-                              : 0;
+                          const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
+                          let progress = 0;
+                          if (isLhpBpk) {
+                            progress = 100;
+                          } else {
+                            progress =
+                              currentTargetVal > 0
+                                ? (totalTargetBulanan / currentTargetVal) * 100
+                                : 0;
+                          }
                           let status = "Belum tercapai";
                           if (progress >= 100) status = "Tercapai";
                           else if (progress >= 80) status = "Perlu perhatian";
