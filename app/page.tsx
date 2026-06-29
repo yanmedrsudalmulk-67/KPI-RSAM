@@ -37,27 +37,11 @@ export default function LandingPage() {
     <div className="min-h-screen text-white flex flex-col relative font-roboto-condensed overflow-hidden">
       {/* Background Cinematic Overlay for Landing Page */}
       <div className="absolute inset-0 z-[-1] pointer-events-none">
-        {/* Subtle, localized vignettes from top-left and bottom-left corners (using radial-gradient for a perfectly soft, borderless blend) */}
+        {/* Subtle, soft bottom dark shadow (vignette) focused at the bottom edge with a maximum thickness of 60% from the bottom of the screen to cover video watermarks elegantly */}
         <div 
-          className="absolute top-0 left-0 w-[45%] h-[40%]"
-          style={{ background: 'radial-gradient(circle at top left, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.15) 45%, rgba(2, 6, 23, 0) 100%)' }}
+          className="absolute bottom-0 left-0 right-0 h-[60%]"
+          style={{ background: 'linear-gradient(to top, rgba(2, 6, 23, 0.95) 0%, rgba(2, 6, 23, 0.7) 25%, rgba(2, 6, 23, 0.35) 60%, rgba(2, 6, 23, 0) 100%)' }}
         ></div>
-        <div 
-          className="absolute bottom-0 left-0 w-[45%] h-[40%]"
-          style={{ background: 'radial-gradient(circle at bottom left, rgba(2, 6, 23, 0.35) 0%, rgba(2, 6, 23, 0.15) 45%, rgba(2, 6, 23, 0) 100%)' }}
-        ></div>
-
-        {/* Mobile / Portrait mode: super smooth eased bottom-up gradient to protect text legibility without visible transition lines */}
-        <div 
-          className="absolute inset-0 block md:hidden portrait:block landscape:hidden"
-          style={{ background: 'linear-gradient(to top, rgba(2, 6, 23, 0.85) 0%, rgba(2, 6, 23, 0.55) 20%, rgba(2, 6, 23, 0.3) 45%, rgba(2, 6, 23, 0.12) 70%, rgba(2, 6, 23, 0.03) 85%, rgba(2, 6, 23, 0) 100%)' }}
-        ></div>
-
-        {/* Landscape / Desktop cinematic side gradients (prevented from overlapping/stacking in portrait) */}
-        <div className="hidden md:block landscape:block portrait:hidden absolute inset-0">
-          <div className="absolute top-0 left-0 bottom-0 w-[60%] bg-gradient-to-r from-[#020617]/70 via-[#020617]/30 to-transparent"></div>
-          <div className="absolute top-0 right-0 bottom-0 w-[40%] bg-gradient-to-l from-[#020617]/90 via-[#020617]/40 to-transparent"></div>
-        </div>
       </div>
 
       {/* Header */}

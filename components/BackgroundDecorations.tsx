@@ -163,6 +163,9 @@ export default function BackgroundDecorations() {
             loop
             muted
             playsInline
+            preload="auto"
+            disablePictureInPicture
+            controls={false}
             className={`w-full h-full object-cover transition-opacity duration-500 ${isWelcomePage ? "opacity-100" : "opacity-50"}`}
           />
           {/* Elegant Dark Overlay for main pages to ensure contrast */}

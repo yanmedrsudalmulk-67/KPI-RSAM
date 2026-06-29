@@ -16,7 +16,8 @@ import {
   Eye,
   Wallpaper,
   Settings as SettingsIcon,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import Image from "next/image";
 
@@ -47,6 +48,12 @@ export default function PengaturanPage() {
   // Background Settings State
   const [welcomeBgType, setWelcomeBgType] = useState<"default" | "image" | "video">("default");
   const [welcomeBgVal, setWelcomeBgVal] = useState<string>("");
+  const [welcomeVideoInfo, setWelcomeVideoInfo] = useState<{
+    name: string;
+    size: number;
+    uploadDate: string;
+    active: boolean;
+  } | null>(null);
   const [menuBgType, setMenuBgType] = useState<"default" | "image" | "video">("default");
   const [menuBgVal, setMenuBgVal] = useState<string>("");
 
@@ -120,6 +127,9 @@ export default function PengaturanPage() {
                 setWelcomeBgVal(parsed.welcome_bg_val);
                 if (parsed.welcome_bg_type === "video") setWelcomeVideoInput(parsed.welcome_bg_val);
               }
+              if (parsed.welcome_video_info) {
+                setWelcomeVideoInfo(parsed.welcome_video_info);
+              }
               if (parsed.menu_bg_type) {
                 setMenuBgType(parsed.menu_bg_type as any);
               }
@@ -163,6 +173,9 @@ export default function PengaturanPage() {
             if (parsed.welcome_bg_val !== undefined && parsed.welcome_bg_val !== null) {
               setWelcomeBgVal(parsed.welcome_bg_val);
               if (parsed.welcome_bg_type === "video") setWelcomeVideoInput(parsed.welcome_bg_val);
+            }
+            if (parsed.welcome_video_info) {
+              setWelcomeVideoInfo(parsed.welcome_video_info);
             }
             if (parsed.menu_bg_type) {
               setMenuBgType(parsed.menu_bg_type as any);
@@ -374,7 +387,34 @@ export default function PengaturanPage() {
 
   const handleWelcomeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setWelcomeFile(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      if (welcomeBgType === "video") {
+        if (file.type !== "video/mp4" && !file.name.endsWith(".mp4")) {
+          setStatusMessage({
+            type: "error",
+            text: "Format file harus MP4!",
+          });
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          setStatusMessage({
+            type: "error",
+            text: "Ukuran video maksimal 10 MB",
+          });
+          return;
+        }
+      } else if (welcomeBgType === "image") {
+        if (!file.type.startsWith("image/")) {
+          setStatusMessage({
+            type: "error",
+            text: "Format file harus gambar (JPG/PNG)!",
+          });
+          return;
+        }
+      }
+      
+      setWelcomeFile(file);
       setStatusMessage(null);
     }
   };
@@ -677,15 +717,71 @@ export default function PengaturanPage() {
       let finalVal = target === "welcome" ? welcomeBgVal : menuBgVal;
       const targetFile = target === "welcome" ? welcomeFile : menuFile;
       const targetVideoInput = target === "welcome" ? welcomeVideoInput : menuVideoInput;
+      let nextVideoInfo = welcomeVideoInfo;
 
       if (type === "default") {
         finalVal = "";
-      } else if (type === "video") {
-        const urlToUse = targetVideoInput.trim();
-        if (!urlToUse) {
-          throw new Error("Silakan masukkan tautan video yang benar (contoh: https://domain.com/background.mp4)!");
+        if (target === "welcome") {
+          nextVideoInfo = null;
         }
-        finalVal = urlToUse;
+      } else if (type === "video") {
+        if (target === "welcome") {
+          if (targetFile) {
+            if (targetFile.type !== "video/mp4" && !targetFile.name.endsWith(".mp4")) {
+              throw new Error("Format file harus MP4!");
+            }
+            if (targetFile.size > 10 * 1024 * 1024) {
+              throw new Error("Ukuran video maksimal 10 MB");
+            }
+
+            if (!supabase) {
+              finalVal = await convertToBase64(targetFile);
+              nextVideoInfo = {
+                name: targetFile.name,
+                size: targetFile.size,
+                uploadDate: new Date().toISOString(),
+                active: true
+              };
+            } else {
+              const fileExt = "mp4";
+              const fileName = `welcome-video-${Date.now()}.${fileExt}`;
+              const filePath = `backgrounds/${fileName}`;
+
+              const { error: uploadError } = await supabase.storage
+                .from("assets")
+                .upload(filePath, targetFile, { upsert: true });
+
+              if (uploadError) {
+                throw new Error(`Upload video gagal: ${uploadError.message}`);
+              }
+
+              const {
+                data: { publicUrl },
+              } = supabase.storage.from("assets").getPublicUrl(filePath);
+              finalVal = publicUrl;
+
+              nextVideoInfo = {
+                name: targetFile.name,
+                size: targetFile.size,
+                uploadDate: new Date().toISOString(),
+                active: true
+              };
+            }
+          } else {
+            if (!finalVal) {
+              throw new Error("Silakan pilih file video untuk diunggah terlebih dahulu!");
+            }
+            if (nextVideoInfo) {
+              nextVideoInfo.active = true;
+            }
+          }
+        } else {
+          const urlToUse = targetVideoInput.trim();
+          if (!urlToUse) {
+            throw new Error("Silakan masukkan tautan video yang benar (contoh: https://domain.com/background.mp4)!");
+          }
+          finalVal = urlToUse;
+        }
       } else if (type === "image") {
         if (targetFile) {
           if (!supabase) {
@@ -721,6 +817,7 @@ export default function PengaturanPage() {
       if (target === "welcome") {
         setWelcomeBgType(type);
         setWelcomeBgVal(finalVal);
+        setWelcomeVideoInfo(nextVideoInfo);
       } else {
         setMenuBgType(type);
         setMenuBgVal(finalVal);
@@ -764,13 +861,19 @@ export default function PengaturanPage() {
           console.warn("Could not fetch current settings for merge:", fetchErr);
         }
 
+        // Adjust video info active status
+        if (nextVideoInfo) {
+          nextVideoInfo.active = (finalWType === "video");
+        }
+
         // Create the combined JSON serialized structure
         const serializedPayload = JSON.stringify({
           logo_url: existingLogo,
           welcome_bg_type: finalWType,
           welcome_bg_val: finalWVal,
           menu_bg_type: finalMType,
-          menu_bg_val: finalMVal
+          menu_bg_val: finalMVal,
+          welcome_video_info: nextVideoInfo
         });
 
         const payload: any = { 
@@ -1137,20 +1240,151 @@ export default function PengaturanPage() {
                 )}
 
                 {welcomeBgType === "video" && (
-                  <div className="space-y-3">
-                    <span className="text-xs font-medium text-gray-400">Tautan Link Video MP4 / WebM:</span>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <LinkIcon className="absolute left-3.5 top-3 w-4 h-4 text-gray-500" />
-                        <input
-                          type="text"
-                          placeholder="https://example.com/movie.mp4"
-                          value={welcomeVideoInput}
-                          onChange={(e) => setWelcomeVideoInput(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 bg-dark-navy/50 border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-primary-purple transition-all placeholder:text-gray-600"
-                        />
+                  <div className="space-y-4">
+                    {/* Active Video Info Card */}
+                    {welcomeBgVal ? (
+                      <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-white flex items-center gap-1.5 text-xs">
+                            <VideoIcon className="w-4 h-4 text-primary-purple" /> Video Latar Belakang Aktif
+                          </p>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${welcomeVideoInfo?.active ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/15 text-amber-400 border border-amber-500/30"}`}>
+                            {welcomeVideoInfo?.active ? "● Aktif" : "○ Nonaktif"}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-400 border-t border-white/5 pt-2">
+                          <div>
+                            <span className="block text-[9px] text-gray-500 font-mono">NAMA FILE</span>
+                            <span className="font-medium text-gray-300 break-all">{welcomeVideoInfo?.name || "welcome-video.mp4"}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[9px] text-gray-500 font-mono">UKURAN FILE</span>
+                            <span className="font-medium text-gray-300">
+                              {welcomeVideoInfo?.size ? `${(welcomeVideoInfo.size / (1024 * 1024)).toFixed(2)} MB` : "Terdokumentasi"}
+                            </span>
+                          </div>
+                          <div className="mt-1">
+                            <span className="block text-[9px] text-gray-500 font-mono">TANGGAL UPLOAD</span>
+                            <span className="font-medium text-gray-300">
+                              {welcomeVideoInfo?.uploadDate ? new Date(welcomeVideoInfo.uploadDate).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Baru-baru ini"}
+                            </span>
+                          </div>
+                          <div className="mt-1">
+                            <span className="block text-[9px] text-gray-500 font-mono">SUMBER</span>
+                            <span className="font-medium text-gray-300 truncate block">Supabase Storage</span>
+                          </div>
+                        </div>
+
+                        {/* Interactive Preview of the current active video */}
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-white/5 bg-black/40">
+                          <video 
+                            src={welcomeBgVal} 
+                            autoPlay 
+                            loop 
+                            muted 
+                            playsInline 
+                            preload="metadata"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[9px] text-white">
+                            Live Preview
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWelcomeFile(null);
+                              const inputEl = document.getElementById("welcome-video-upload-input");
+                              if (inputEl) inputEl.click();
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium transition-all cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5 text-primary-purple" /> Ganti Video
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (confirm("Apakah Anda yakin ingin menghapus video latar belakang welcome page ini?")) {
+                                setWelcomeBgVal("");
+                                setWelcomeVideoInfo(null);
+                                setWelcomeFile(null);
+                                await handleSaveBackground("welcome", "default");
+                              }
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-all border border-red-500/20 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Hapus Video
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <label className="border-2 border-dashed border-white/10 hover:border-primary-purple/50 hover:bg-white/[0.02] transition-all bg-dark-navy/30 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer min-h-[140px] group relative">
+                          <VideoIcon className="w-8 h-8 text-gray-500 group-hover:text-primary-purple transition-colors mb-2" />
+                          <span className="text-xs font-semibold text-white">Upload Video MP4</span>
+                          <span className="text-[10px] text-gray-400 text-center mt-1">
+                            {welcomeFile ? welcomeFile.name : "Seret & letakkan atau klik untuk memilih file video"}
+                          </span>
+                          <span className="text-[9px] text-gray-500 mt-0.5">Format .MP4 (Maksimal 10MB)</span>
+                          <input
+                            id="welcome-video-upload-input"
+                            type="file"
+                            accept="video/mp4"
+                            className="hidden"
+                            onChange={handleWelcomeFileChange}
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    {welcomeFile && (
+                      <div className="p-4 bg-primary-purple/5 border border-primary-purple/20 rounded-xl space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-white flex items-center gap-1.5 text-xs">
+                            <Sparkles className="w-4 h-4 text-primary-purple" /> Video Terpilih (Belum Disimpan)
+                          </p>
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {(welcomeFile.size / (1024 * 1024)).toFixed(2)} MB
+                          </span>
+                        </div>
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-white/5 bg-black/40">
+                          <video 
+                            src={URL.createObjectURL(welcomeFile)} 
+                            autoPlay 
+                            loop 
+                            muted 
+                            playsInline 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-2 right-2 bg-amber-500/80 backdrop-blur-md px-2 py-0.5 rounded text-[9px] text-white font-medium">
+                            Preview Baru
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setWelcomeFile(null)}
+                            className="flex-1 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-medium transition-all"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {welcomeBgVal && (
+                      <input
+                        id="welcome-video-upload-input"
+                        type="file"
+                        accept="video/mp4"
+                        className="hidden"
+                        onChange={handleWelcomeFileChange}
+                      />
+                    )}
+
                     <p className="text-[10px] text-gray-500">Video akan berputar otomatis (autoplay) secara senyap (muted) & berulang (looping) untuk menjamin estetika tanpa mengganggu pengguna.</p>
                   </div>
                 )}
@@ -1183,12 +1417,13 @@ export default function PengaturanPage() {
                         alt="Preview" 
                       />
                     )}
-                    {welcomeBgType === "video" && welcomeVideoInput && (
+                    {welcomeBgType === "video" && (welcomeFile || welcomeBgVal) && (
                       <video 
-                        src={welcomeVideoInput} 
+                        src={welcomeFile ? URL.createObjectURL(welcomeFile) : welcomeBgVal} 
                         autoPlay 
                         loop 
                         muted 
+                        playsInline
                         className="w-full h-full object-cover" 
                       />
                     )}
