@@ -488,11 +488,12 @@ export default function GrafikPage() {
               </select>
             </div>
           </div>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={perbandinganTahunData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+          <div className="h-[300px] w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="h-full min-w-[600px] w-full pb-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={perbandinganTahunData} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tick={<CompareXAxisTick />} interval={0} />
+                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tick={<CompareXAxisTick />} interval={0} padding={{ left: 20, right: 20 }} />
                 <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
                 <Tooltip 
                   cursor={{fill: '#1E293B', opacity: 0.4}}
@@ -504,6 +505,7 @@ export default function GrafikPage() {
                 <Bar dataKey={compareYear2} name={compareYear2.toString()} fill="#10B981" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -512,9 +514,10 @@ export default function GrafikPage() {
           <h3 className="font-semibold text-white mb-6 font-poppins flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-primary-cyan" /> Tren Capaian Bulanan {filterTahun}
           </h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trenBulananData} margin={{ top: 20, right: 20, left: -20, bottom: 0 }}>
+          <div className="h-[300px] w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="h-full min-w-[600px] w-full pb-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trenBulananData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
@@ -527,6 +530,7 @@ export default function GrafikPage() {
                 </Line>
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
@@ -541,12 +545,13 @@ export default function GrafikPage() {
               <button onClick={() => setCapaianChartType('line')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${capaianChartType === 'line' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}>Line</button>
             </div>
           </div>
-          <div className="h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {capaianChartType === 'bar' ? (
-                <BarChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} tick={<CustomXAxisTick />} interval={0} />
+          <div className="h-[350px] w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="h-full min-w-[600px] w-full pb-2">
+              <ResponsiveContainer width="100%" height="100%">
+                {capaianChartType === 'bar' ? (
+                  <BarChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} tick={<CustomXAxisTick />} interval={0} padding={{ left: 40, right: 40 }} />
                   <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
                   <Tooltip 
                     cursor={{fill: '#1E293B', opacity: 0.4}}
@@ -561,7 +566,7 @@ export default function GrafikPage() {
                   </Bar>
                 </BarChart>
               ) : (
-                <LineChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: -20, bottom: 20 }}>
+                <LineChart data={pilarCapaianData} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                   <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} tickMargin={10} tick={<CustomXAxisTick />} interval={0} padding={{ left: 40, right: 40 }} />
                   <YAxis stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} domain={[0, 100]} />
@@ -575,6 +580,7 @@ export default function GrafikPage() {
                 </LineChart>
               )}
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
 

@@ -358,13 +358,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartType === 'bar' ? (
-                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 25 }}>
+          <div className="h-[400px] w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+            <div className="h-full min-w-[800px] w-full pb-2">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartType === 'bar' ? (
+                  <BarChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickMargin={20} />
-                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <XAxis dataKey="name" stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} tickMargin={10} angle={-45} textAnchor="end" height={60} />
+                  <YAxis stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} tickMargin={5} width={35} />
                   <Tooltip 
                     cursor={{fill: '#1E293B', opacity: 0.4}}
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
@@ -383,10 +384,10 @@ export default function DashboardPage() {
                   </Bar>
                 </BarChart>
               ) : (
-                <LineChart data={chartData} margin={{ top: 20, right: 20, left: -20, bottom: 25 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 40 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} tickMargin={20} />
-                  <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} domain={[0, 100]} />
+                  <XAxis dataKey="name" stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} tickMargin={10} angle={-45} textAnchor="end" height={60} />
+                  <YAxis stroke="#64748B" fontSize={10} tickLine={false} axisLine={false} domain={[0, 100]} tickMargin={5} width={35} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)' }}
                     formatter={(value: number) => [`${value}%`, '']}
@@ -402,6 +403,7 @@ export default function DashboardPage() {
                 </LineChart>
               )}
             </ResponsiveContainer>
+            </div>
           </div>
         </div>
       </div>

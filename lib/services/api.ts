@@ -54,6 +54,9 @@ export async function getIndicatorsByPilar(pilarId: number) {
 
   return (data || []).map(ind => {
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator) {
+      nama_indikator = nama_indikator.replace("Jumlah PPPK/PWTHL yang dapat ditampung", "Jumlah PPPKPW/THL yang dapat ditampung");
+    }
     return {
       ...ind,
       nama_indikator,
@@ -136,6 +139,9 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
     else status = "Belum tercapai";
 
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator) {
+      nama_indikator = nama_indikator.replace("Jumlah PPPK/PWTHL yang dapat ditampung", "Jumlah PPPKPW/THL yang dapat ditampung");
+    }
 
     return {
       ...ind,
@@ -163,6 +169,9 @@ export async function getIndicators() {
   
   return (data || []).map(ind => {
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator) {
+      nama_indikator = nama_indikator.replace("Jumlah PPPK/PWTHL yang dapat ditampung", "Jumlah PPPKPW/THL yang dapat ditampung");
+    }
     return {
       ...ind,
       nama_indikator
@@ -279,6 +288,9 @@ export async function getAllDataForAnalytics() {
   
   return (data || []).map(ind => {
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator) {
+      nama_indikator = nama_indikator.replace("Jumlah PPPK/PWTHL yang dapat ditampung", "Jumlah PPPKPW/THL yang dapat ditampung");
+    }
     return {
       ...ind,
       nama_indikator
@@ -358,6 +370,9 @@ export async function getIndicatorsWithCapaianByYear(tahun: number) {
     const pilarName = ind.pilar || '';
 
     let nama_indikator = ind.uraian_kpi || ind.nama_indikator || ind.name;
+    if (nama_indikator) {
+      nama_indikator = nama_indikator.replace("Jumlah PPPK/PWTHL yang dapat ditampung", "Jumlah PPPKPW/THL yang dapat ditampung");
+    }
 
     return {
       ...ind,

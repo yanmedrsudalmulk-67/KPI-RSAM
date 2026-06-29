@@ -701,13 +701,14 @@ export default function PilarDetail({
           </div>
         </div>
 
-        <div className="h-[400px] w-full bg-black/20 rounded-xl p-4 border border-white/5">
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+        <div className="h-[400px] w-full bg-black/20 rounded-xl p-4 border border-white/5 overflow-x-auto overflow-y-hidden custom-scrollbar">
+          <div className="h-full min-w-[800px] w-full pb-2">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
               {chartType === "bar" ? (
                 <BarChart
                   data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 20, right: 10, left: 0, bottom: 20 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -717,12 +718,20 @@ export default function PilarDetail({
                   <XAxis
                     dataKey="name"
                     stroke="#ffffff50"
-                    tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tick={{ fill: "#ffffff80", fontSize: 10 }}
+                    tickMargin={10}
+                    axisLine={false}
+                    tickLine={false}
+                    padding={{ left: 15, right: 15 }}
                   />
                   <YAxis
                     stroke="#ffffff50"
-                    tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tick={{ fill: "#ffffff80", fontSize: 10 }}
                     tickFormatter={(val) => `${val}%`}
+                    width={35}
+                    tickMargin={5}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
@@ -762,7 +771,7 @@ export default function PilarDetail({
               ) : (
                 <LineChart
                   data={chartData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 20, right: 10, left: 0, bottom: 20 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -772,12 +781,20 @@ export default function PilarDetail({
                   <XAxis
                     dataKey="name"
                     stroke="#ffffff50"
-                    tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tick={{ fill: "#ffffff80", fontSize: 10 }}
+                    tickMargin={10}
+                    axisLine={false}
+                    tickLine={false}
+                    padding={{ left: 15, right: 15 }}
                   />
                   <YAxis
                     stroke="#ffffff50"
-                    tick={{ fill: "#ffffff80", fontSize: 12 }}
+                    tick={{ fill: "#ffffff80", fontSize: 10 }}
                     tickFormatter={(val) => `${val}%`}
+                    width={35}
+                    tickMargin={5}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ paddingTop: "20px" }} />
@@ -827,6 +844,7 @@ export default function PilarDetail({
               Pilih indikator untuk melihat grafik
             </div>
           )}
+          </div>
         </div>
       </div>
 
