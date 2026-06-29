@@ -193,7 +193,9 @@ export default function LaporanRealisasiPage() {
       (c: any) => c.bulan === bulan && c.tahun === tahun,
     );
 
-    if (existingCapaian) {
+    const hasRealRealisasi = existingCapaian && existingCapaian.dokumen_url !== null;
+
+    if (hasRealRealisasi) {
       setHasExistingData(true);
       setInputRealisasi(formatValue(existingCapaian.realisasi.toString(), ind.satuan || "", ind.nama_indikator || ind.name || ""));
       try {
@@ -314,11 +316,29 @@ export default function LaporanRealisasiPage() {
     setIsSaving(true);
     try {
       if (isSupabaseConfigured()) {
-        await supabase!.from("capaian_kpi").delete().match({
-          indikator_id: selectedIndikator.id,
-          bulan: bulan,
-          tahun: tahun,
-        });
+        const existingCapaian = selectedIndikator.capaians?.find(
+          (c: any) => c.bulan === bulan && c.tahun === tahun
+        );
+
+        if (existingCapaian && existingCapaian.target_bulanan !== null && Number(existingCapaian.target_bulanan) !== 0) {
+          await supabase!.from("capaian_kpi").update({
+            realisasi: 0,
+            persentase: 0,
+            status: "Belum tercapai",
+            dokumen_url: null,
+            updated_at: new Date().toISOString()
+          }).match({
+            indikator_id: selectedIndikator.id,
+            bulan: bulan,
+            tahun: tahun,
+          });
+        } else {
+          await supabase!.from("capaian_kpi").delete().match({
+            indikator_id: selectedIndikator.id,
+            bulan: bulan,
+            tahun: tahun,
+          });
+        }
         await loadData(tahun);
       }
       setIsModalOpen(false);
@@ -480,7 +500,7 @@ export default function LaporanRealisasiPage() {
                   const currentCapaian = ind.capaians?.find(
                     (c: any) => c.bulan === bulan && c.tahun === tahun,
                   );
-                  const isInputted = !!currentCapaian;
+                  const isInputted = !!currentCapaian && currentCapaian.dokumen_url !== null;
                   
                   const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 

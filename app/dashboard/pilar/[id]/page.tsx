@@ -284,22 +284,27 @@ export default function PilarDetail({
         ? Number(capaian.target_bulanan)
         : targetBulananDefault;
 
-      const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
+      const hasInputtedRealisasi = capaian && capaian.dokumen_url !== null;
 
-      let realisasiPercentage = 0;
-      if (isLhpBpk) {
-        if (targetBulananValue === 0 && realisasiValue === 0) {
-          realisasiPercentage = 100;
-        } else if (targetBulananValue === 0 && realisasiValue > 0) {
-          realisasiPercentage = 100;
-        } else if (targetBulananValue > 0) {
-          realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+      let realisasiPercentage = null;
+      if (hasInputtedRealisasi) {
+        const realisasiValue = Number(capaian.realisasi || 0);
+        if (isLhpBpk) {
+          if (targetBulananValue === 0 && realisasiValue === 0) {
+            realisasiPercentage = 100;
+          } else if (targetBulananValue === 0 && realisasiValue > 0) {
+            realisasiPercentage = 100;
+          } else if (targetBulananValue > 0) {
+            realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+          } else {
+            realisasiPercentage = 100;
+          }
         } else {
-          realisasiPercentage = 100;
-        }
-      } else {
-        if (targetBulananValue > 0) {
-          realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+          if (targetBulananValue > 0) {
+            realisasiPercentage = Number(((realisasiValue / targetBulananValue) * 100).toFixed(1));
+          } else {
+            realisasiPercentage = 0;
+          }
         }
       }
 
@@ -544,7 +549,7 @@ export default function PilarDetail({
                       targetVal = Number(cap.target_bulanan);
                     }
                     
-                    const realisasiVal = cap ? cap.realisasi : null;
+                    const realisasiVal = (cap && cap.dokumen_url !== null) ? cap.realisasi : null;
 
                     return (
                       <td
