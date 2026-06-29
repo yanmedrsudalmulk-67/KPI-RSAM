@@ -253,8 +253,9 @@ export default function PilarDetail({
     const targetTahunan = Number(
       selectedIndObj.target_tahunan || selectedIndObj.target || 0,
     );
+    const isLhpBpk = selectedIndObj?.nama_indikator?.includes("LHP BPK") || selectedIndObj?.name?.includes("LHP BPK") || selectedIndObj?.uraian_kpi?.includes("LHP BPK");
     const targetBulananDefault =
-      targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
+      isLhpBpk ? 0 : (targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0);
 
     const capList = selectedIndObj.capaian_kpi || selectedIndObj.capaians || [];
 
@@ -285,7 +286,6 @@ export default function PilarDetail({
 
       const realisasiValue = capaian ? Number(capaian.realisasi || 0) : 0;
 
-      const isLhpBpk = selectedIndObj?.nama_indikator?.includes("LHP BPK") || selectedIndObj?.name?.includes("LHP BPK") || selectedIndObj?.uraian_kpi?.includes("LHP BPK");
       let realisasiPercentage = 0;
       if (isLhpBpk) {
         if (targetBulananValue === 0 && realisasiValue === 0) {
@@ -303,7 +303,7 @@ export default function PilarDetail({
         }
       }
 
-      const targetPercentage = targetBulananValue > 0 ? 100 : 0;
+      const targetPercentage = isLhpBpk ? 100 : (targetBulananValue > 0 ? 100 : 0);
 
       data.push({
         name: months[i - 1],
@@ -317,43 +317,58 @@ export default function PilarDetail({
   }, [selectedIndObj, selectedGraphTahun]);
 
   const selectedMonthDocs = useMemo(() => {
-    const docs: { id: string, month: string, url: string }[] = [];
-    chartData.forEach((d, index) => {
-      // Filter by selected month if selectedGraphBulan is not 0 (Tahunan)
-      const monthIndex = index + 1; // index is 0-11, monthIndex is 1-12
-      if (selectedGraphBulan !== 0 && selectedGraphBulan !== monthIndex) {
-        return;
-      }
-
-      if (d.dokumen_url) {
-        try {
-          const parsed = JSON.parse(d.dokumen_url);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((url, i) => {
-              docs.push({
-                id: `${index}-${i}`,
-                month: d.name,
-                url: url,
+    const docs: { id: string, month: string, url: string, indicatorName: string }[] = [];
+    
+    indicators.forEach((ind, indIdx) => {
+      const capList = ind.capaian_kpi || ind.capaians || [];
+      const months = [
+        "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des",
+      ];
+      
+      for (let i = 1; i <= 12; i++) {
+        if (selectedGraphBulan !== 0 && selectedGraphBulan !== i) continue;
+        
+        const capaian = capList.find(
+          (c: any) => c.bulan === i && c.tahun === parseInt(selectedGraphTahun),
+        );
+        
+        if (capaian && capaian.dokumen_url) {
+          const monthName = months[i - 1];
+          const indName = ind.nama_indikator || ind.name || "";
+          
+          try {
+            const parsed = JSON.parse(capaian.dokumen_url);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((url, urlIdx) => {
+                docs.push({
+                  id: `${indIdx}-${i}-${urlIdx}`,
+                  month: monthName,
+                  url: url,
+                  indicatorName: indName,
+                });
               });
-            });
-          } else {
+            } else {
+              docs.push({
+                id: `${indIdx}-${i}`,
+                month: monthName,
+                url: capaian.dokumen_url,
+                indicatorName: indName,
+              });
+            }
+          } catch {
             docs.push({
-              id: `${index}`,
-              month: d.name,
-              url: d.dokumen_url,
+              id: `${indIdx}-${i}`,
+              month: monthName,
+              url: capaian.dokumen_url,
+              indicatorName: indName,
             });
           }
-        } catch {
-          docs.push({
-            id: `${index}`,
-            month: d.name,
-            url: d.dokumen_url,
-          });
         }
       }
     });
+    
     return docs;
-  }, [chartData, selectedGraphBulan]);
+  }, [indicators, selectedGraphBulan, selectedGraphTahun]);
 
   const selectedMonthNameName = useMemo(() => {
     if (selectedGraphBulan === 0) return "Semua Bulan";
@@ -520,8 +535,9 @@ export default function PilarDetail({
                     const capList = ind.capaian_kpi || ind.capains || [];
                     const cap = capList.find((c: any) => c.bulan === bulan && c.tahun === parseInt(selectedGraphTahun));
                     
+                    const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
                     const targetTahunan = Number(ind.target_tahunan || ind.target || 0);
-                    const targetBulananDefault = targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0;
+                    const targetBulananDefault = isLhpBpk ? 0 : (targetTahunan > 0 ? Number((targetTahunan / 12).toFixed(2)) : 0);
                     
                     let targetVal = targetBulananDefault;
                     if (cap && cap.target_bulanan !== undefined && cap.target_bulanan !== null) {
@@ -540,10 +556,10 @@ export default function PilarDetail({
                             className="w-full bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded text-[10px] sm:text-[11px] font-mono py-1 px-2 whitespace-nowrap font-medium transition-all hover:bg-blue-500/20" 
                             title={`Target Bulan ${bulan}`}
                           >
-                            {targetVal > 0 ? (
+                            {isLhpBpk || targetVal > 0 ? (
                               <>
                                 {targetVal.toLocaleString("id-ID", { maximumFractionDigits: 1 })}
-                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                                {isLhpBpk ? "" : ((ind.satuan || "").toLowerCase().includes("persen") && "%")}
                               </>
                             ) : "-"}
                           </div>
@@ -554,7 +570,7 @@ export default function PilarDetail({
                             {realisasiVal !== null ? (
                               <>
                                 {Number(realisasiVal).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
-                                {(ind.satuan || "").toLowerCase().includes("persen") && "%"}
+                                {isLhpBpk ? "" : ((ind.satuan || "").toLowerCase().includes("persen") && "%")}
                               </>
                             ) : "-"}
                           </div>
@@ -831,13 +847,21 @@ export default function PilarDetail({
                           alt={`Dokumen ${doc.month}`}
                           className="w-full h-full min-h-[300px] max-h-[400px] object-contain group-hover:scale-105 transition-transform duration-500"
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center transition-all">
-                          <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-xl">
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex flex-col items-center justify-center transition-all">
+                          <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm shadow-xl mb-2">
                             View Gambar
                           </span>
                         </div>
                       </>
                     )}
+                  </div>
+                  <div className="bg-black/40 p-4 border-t border-white/5">
+                    <p className="text-xs text-gray-400 font-medium mb-1">
+                      {doc.indicatorName.length > 50 ? doc.indicatorName.substring(0, 50) + "..." : doc.indicatorName}
+                    </p>
+                    <p className="text-sm text-white font-semibold">
+                      Dokumen Bulan {doc.month}
+                    </p>
                   </div>
                 </div>
               );

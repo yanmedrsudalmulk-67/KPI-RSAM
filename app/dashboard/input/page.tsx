@@ -760,7 +760,7 @@ export default function InputKpiPage() {
                               })}
 
                               <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-semibold text-gray-100 min-w-[140px] w-40">
-                                {formatValue(totalTargetBulanan.toString(), ind.satuan || "") || "0"}
+                                {isLhpBpk ? "100%" : (formatValue(totalTargetBulanan.toString(), ind.satuan || "") || "0")}
                               </td>
                               <td className="px-4 py-3 text-center border-r border-white/10 font-mono font-bold text-white min-w-[90px] w-24">
                                 {progress.toFixed(1)}%

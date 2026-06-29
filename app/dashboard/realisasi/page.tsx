@@ -134,8 +134,19 @@ export default function LaporanRealisasiPage() {
   }
 
   // Helper functions for formatting based on Satuan
-  const formatValue = (value: string, satuan: string) => {
+  const formatValue = (value: string, satuan: string, indicatorName?: string) => {
     if (!value) return "";
+    const isLhpBpk = indicatorName?.includes("LHP BPK");
+    if (isLhpBpk) {
+      // Plain numbers allowing decimals
+      let numStr = value.replace(/[^0-9.]/g, "");
+      const parts = numStr.split('.');
+      if (parts.length > 2) {
+        numStr = parts[0] + '.' + parts.slice(1).join('');
+      }
+      return numStr;
+    }
+
     const s = (satuan || "").toLowerCase();
 
     if (s.includes("rupiah") || s.includes("rp")) {
@@ -184,7 +195,7 @@ export default function LaporanRealisasiPage() {
 
     if (existingCapaian) {
       setHasExistingData(true);
-      setInputRealisasi(formatValue(existingCapaian.realisasi.toString(), ind.satuan || ""));
+      setInputRealisasi(formatValue(existingCapaian.realisasi.toString(), ind.satuan || "", ind.nama_indikator || ind.name || ""));
       try {
         const parsed = JSON.parse(existingCapaian.dokumen_url);
         if (Array.isArray(parsed)) {
@@ -224,11 +235,12 @@ export default function LaporanRealisasiPage() {
         (c: any) => c.bulan === bulan && c.tahun === tahun,
       );
 
+      const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
+      
       const targetBulanan = currentCapaian?.target_bulanan !== undefined
         ? Number(currentCapaian.target_bulanan)
-        : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0);
+        : (isLhpBpk ? 0 : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0));
 
-      const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
       let pct = 0;
       if (isLhpBpk) {
         if (targetBulanan === 0 && validValue === 0) {
@@ -469,13 +481,15 @@ export default function LaporanRealisasiPage() {
                     (c: any) => c.bulan === bulan && c.tahun === tahun,
                   );
                   const isInputted = !!currentCapaian;
+                  
+                  const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
                   // Calculate target bulanan
                   const targetTahunan = Number(ind.target_tahunan || 0);
                   const targetBulanan =
                     currentCapaian?.target_bulanan !== undefined
                       ? Number(currentCapaian.target_bulanan)
-                      : (targetTahunan > 0 ? targetTahunan / 12 : 0);
+                      : (isLhpBpk ? 0 : (targetTahunan > 0 ? targetTahunan / 12 : 0));
 
                   // Realisasi value
                   const realisasiVal = isInputted
@@ -483,10 +497,20 @@ export default function LaporanRealisasiPage() {
                     : 0;
 
                   // Calculate persentase to show status
-                  let pct =
-                    targetBulanan > 0
-                      ? (realisasiVal / targetBulanan) * 100
-                      : 0;
+                  let pct = 0;
+                  if (isLhpBpk) {
+                    if (targetBulanan === 0 && realisasiVal === 0) {
+                      pct = 100;
+                    } else if (targetBulanan === 0 && realisasiVal > 0) {
+                      pct = 100;
+                    } else if (targetBulanan > 0) {
+                      pct = (realisasiVal / targetBulanan) * 100;
+                    } else {
+                      pct = 100;
+                    }
+                  } else {
+                    pct = targetBulanan > 0 ? (realisasiVal / targetBulanan) * 100 : 0;
+                  }
 
                   let statusStr = "Belum Input";
                   let statusColor =
@@ -553,7 +577,7 @@ export default function LaporanRealisasiPage() {
                             </p>
                             <p className="text-white font-mono font-medium text-center">
                               {targetTahunan.toLocaleString("id-ID")}
-                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
+                              {isLhpBpk ? "" : ((ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`)}
                             </p>
                           </div>
                           <div className="bg-black/20 rounded-xl p-3 border border-white/5 text-center">
@@ -564,7 +588,7 @@ export default function LaporanRealisasiPage() {
                               {targetBulanan.toLocaleString("id-ID", {
                                 maximumFractionDigits: 1,
                               })}
-                              {(ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`}
+                              {isLhpBpk ? "" : ((ind.satuan || "").toLowerCase().includes("persen") ? "%" : ` ${ind.satuan}`)}
                             </p>
                           </div>
                         </div>
@@ -645,12 +669,13 @@ export default function LaporanRealisasiPage() {
                     </p>
                   </div>
                   {(() => {
+                    const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
                     const modalCapaian = selectedIndikator.capaians?.find(
                       (c: any) => c.bulan === bulan && c.tahun === tahun
                     );
                     const targetBulananVal = modalCapaian?.target_bulanan !== undefined
                       ? Number(modalCapaian.target_bulanan)
-                      : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0);
+                      : (isLhpBpk ? 0 : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0));
 
                     return (
                       <>
@@ -662,7 +687,7 @@ export default function LaporanRealisasiPage() {
                             {Number(
                               selectedIndikator.target_tahunan || 0,
                             ).toLocaleString("id-ID")}
-                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
+                            {isLhpBpk ? "" : ((selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%")}
                           </p>
                         </div>
                         <div className="text-center">
@@ -673,7 +698,7 @@ export default function LaporanRealisasiPage() {
                             {targetBulananVal.toLocaleString("id-ID", {
                               maximumFractionDigits: 1,
                             })}
-                            {(selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%"}
+                            {isLhpBpk ? "" : ((selectedIndikator.satuan || "").toLowerCase().includes("persen") && "%")}
                           </p>
                         </div>
                       </>
@@ -688,14 +713,16 @@ export default function LaporanRealisasiPage() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Nilai Realisasi <span className="text-primary-pink">*</span>
                   </label>
-                  <div className="relative">
+                  <div className="relative mb-3">
                     <input
                       type="text"
                       inputMode="decimal"
                       value={inputRealisasi}
-                      onChange={(e) => setInputRealisasi(formatValue(e.target.value, selectedIndikator.satuan))}
+                      onChange={(e) => setInputRealisasi(formatValue(e.target.value, selectedIndikator.satuan, selectedIndikator.nama_indikator || selectedIndikator.name || ""))}
                       placeholder={(() => {
+                        const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
                         const s = (selectedIndikator?.satuan || "").toLowerCase();
+                        if (isLhpBpk) return "Masukkan angka realisasi...";
                         if (s.includes("orang")) return "Masukkan jumlah orang...";
                         if (s.includes("persen") || s.includes("%")) return "Masukkan persentase (%)...";
                         if (s.includes("rupiah") || s.includes("rp")) return "Masukkan nominal rupiah...";
@@ -705,8 +732,72 @@ export default function LaporanRealisasiPage() {
                       className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary-cyan focus:ring-1 focus:ring-primary-cyan transition-all font-mono text-lg"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-sans text-sm font-medium">
-                      {selectedIndikator.satuan}
+                      {(selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK")) ? "" : selectedIndikator.satuan}
                     </div>
+                  </div>
+
+                  {/* Real-time Preview of Achievement */}
+                  <div className="bg-black/35 p-4 rounded-xl border border-white/5 space-y-2">
+                    <p className="text-[11px] text-gray-400 uppercase font-semibold">
+                      Hasil Realisasi (Pratinjau)
+                    </p>
+                    {inputRealisasi ? (() => {
+                      const validValue = parseRawValue(inputRealisasi);
+                      const isLhpBpk = selectedIndikator.nama_indikator?.includes("LHP BPK") || selectedIndikator.name?.includes("LHP BPK") || selectedIndikator.uraian_kpi?.includes("LHP BPK");
+                      
+                      const modalCapaian = selectedIndikator.capaians?.find(
+                        (c: any) => c.bulan === bulan && c.tahun === tahun
+                      );
+                      const targetBulananVal = modalCapaian?.target_bulanan !== undefined
+                        ? Number(modalCapaian.target_bulanan)
+                        : (isLhpBpk ? 0 : (selectedIndikator.target_tahunan > 0 ? selectedIndikator.target_tahunan / 12 : 0));
+
+                      let pct = 0;
+                      if (isLhpBpk) {
+                        if (targetBulananVal === 0 && validValue === 0) {
+                          pct = 100;
+                        } else if (targetBulananVal === 0 && validValue > 0) {
+                          pct = 100;
+                        } else if (targetBulananVal > 0) {
+                          pct = (validValue / targetBulananVal) * 100;
+                        } else {
+                          pct = 100;
+                        }
+                      } else {
+                        pct = targetBulananVal > 0 ? (validValue / targetBulananVal) * 100 : 0;
+                      }
+
+                      if (pct > 100) pct = 100;
+
+                      let statusStr = "Belum Tercapai";
+                      let statusColor = "text-primary-pink bg-primary-pink/10 border-primary-pink/20";
+
+                      if (pct >= 100) {
+                        statusStr = "Tercapai";
+                        statusColor = "text-primary-green bg-primary-green/10 border-primary-green/20";
+                      } else if (pct >= 80) {
+                        statusStr = "Perlu Perhatian";
+                        statusColor = "text-primary-gold bg-primary-gold/10 border-primary-gold/20";
+                      }
+
+                      return (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-2xl font-bold font-mono text-white">
+                              {pct.toFixed(1)}%
+                            </p>
+                            <p className="text-xs text-gray-400">Persentase Capaian</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+                            {statusStr}
+                          </span>
+                        </div>
+                      );
+                    })() : (
+                      <p className="text-xs text-gray-500 italic">
+                        Silakan ketik angka realisasi untuk melihat hasil capaian...
+                      </p>
+                    )}
                   </div>
                 </div>
 

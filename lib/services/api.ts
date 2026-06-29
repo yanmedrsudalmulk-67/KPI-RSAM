@@ -84,6 +84,8 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
     let totalRealisasi = 0;
     let totalTarget = 0;
     
+    const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
+
     if (targetBulan === 0) {
       // Mode Tahunan
       const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === targetYear);
@@ -103,13 +105,12 @@ export async function getPilarDetail(pilarId: number, tahun?: number, bulan?: nu
       if (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null) {
         totalTarget = Number(capaian.target_bulanan);
       } else {
-        totalTarget = Number(ind.target_tahunan || 0) / 12;
+        totalTarget = isLhpBpk ? 0 : (Number(ind.target_tahunan || 0) / 12);
       }
     }
 
     let progress = 0;
     let status = "Belum tercapai";
-    const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
     if (isLhpBpk) {
       if (totalTarget === 0 && totalRealisasi === 0) {
@@ -206,40 +207,62 @@ export async function getDashboardSummary(tahun: number, bulan: number) {
 
   const result = pilars.map((pilar) => {
     const pilarIndicators = (indicators || []).filter(i => i.pilar === pilar.nama_pilar);
-    let totalTargetPilar = 0;
-    let totalRealisasiPilar = 0;
+    let sumProgress = 0;
 
     pilarIndicators.forEach(ind => {
-      let targetIndikator = 0;
-      let realisasiIndikator = 0;
+      let totalTarget = 0;
+      let totalRealisasi = 0;
+      
+      const isLhpBpk = ind.nama_indikator?.includes("LHP BPK") || ind.name?.includes("LHP BPK") || ind.uraian_kpi?.includes("LHP BPK");
 
-      if (bulan !== 0) {
+      if (bulan === 0) {
+        // Mode Tahunan
+        const filteredCapaianKpi = (ind.capaian_kpi || []).filter((c: any) => c.tahun === tahun);
+        totalRealisasi = filteredCapaianKpi.reduce((sum: number, c: any) => sum + Number(c.realisasi || 0), 0);
+        totalTarget = Number(ind.target_tahunan || 0);
+      } else {
         // Mode Bulanan
         const capaian = ind.capaian_kpi?.find((c: any) => c.tahun === tahun && c.bulan === bulan);
-        realisasiIndikator = capaian ? Number(capaian.realisasi || 0) : 0;
+        totalRealisasi = capaian ? Number(capaian.realisasi || 0) : 0;
         
         if (capaian && capaian.target_bulanan !== undefined && capaian.target_bulanan !== null) {
-          targetIndikator = Number(capaian.target_bulanan);
+          totalTarget = Number(capaian.target_bulanan);
         } else {
-          const targetTahunan = Number(ind.target_tahunan || 0);
-          targetIndikator = targetTahunan / 12;
+          totalTarget = isLhpBpk ? 0 : (Number(ind.target_tahunan || 0) / 12);
         }
-      } else {
-        // Mode Tahunan
-        const capaians = ind.capaian_kpi?.filter((c: any) => c.tahun === tahun) || [];
-        realisasiIndikator = capaians.reduce((sum: number, c: any) => sum + Number(c.realisasi || 0), 0);
-        targetIndikator = Number(ind.target_tahunan || 0);
       }
 
-      totalTargetPilar += targetIndikator;
-      totalRealisasiPilar += realisasiIndikator;
+      let progress = 0;
+
+      if (isLhpBpk) {
+        if (totalTarget === 0 && totalRealisasi === 0) {
+          progress = 100;
+        } else if (totalTarget === 0 && totalRealisasi > 0) {
+          progress = 100;
+        } else if (totalTarget > 0) {
+          progress = (totalRealisasi / totalTarget) * 100;
+        } else {
+          progress = 100;
+        }
+        if (progress > 100) progress = 100;
+      } else {
+        if (totalTarget > 0) {
+           progress = (totalRealisasi / totalTarget) * 100;
+           if (progress > 100) progress = 100;
+        } else {
+           const targetTahunan = Number(ind.target_tahunan || 0);
+           if (targetTahunan > 0) {
+             progress = 0;
+           } else {
+             progress = 100; // default to 100 if no target exists
+           }
+        }
+      }
+
+      sumProgress += progress;
     });
 
-    let finalProgress = 0;
-    if (totalTargetPilar > 0) {
-      finalProgress = (totalRealisasiPilar / totalTargetPilar) * 100;
-      if (finalProgress > 100) finalProgress = 100;
-    }
+    const finalProgress = pilarIndicators.length > 0 ? (sumProgress / pilarIndicators.length) : 0;
 
     let status = "Belum tercapai";
     if (finalProgress >= 100) status = "Tercapai";
