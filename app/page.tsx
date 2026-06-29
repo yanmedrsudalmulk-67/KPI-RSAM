@@ -37,10 +37,10 @@ export default function LandingPage() {
     <div className="min-h-screen text-white flex flex-col relative font-roboto-condensed overflow-hidden">
       {/* Background Cinematic Overlay for Landing Page */}
       <div className="absolute inset-0 z-[-1] pointer-events-none">
-        {/* Subtle, soft bottom dark shadow (vignette) focused at the bottom edge with a maximum thickness of 60% from the bottom of the screen to cover video watermarks elegantly */}
+        {/* Subtle, soft bottom dark shadow (vignette) focused at the bottom edge with a maximum thickness of 20% from the bottom of the screen to cover video watermarks elegantly with deep dark opacity */}
         <div 
-          className="absolute bottom-0 left-0 right-0 h-[60%]"
-          style={{ background: 'linear-gradient(to top, rgba(2, 6, 23, 0.95) 0%, rgba(2, 6, 23, 0.7) 25%, rgba(2, 6, 23, 0.35) 60%, rgba(2, 6, 23, 0) 100%)' }}
+          className="absolute bottom-0 left-0 right-0 h-[20%]"
+          style={{ background: 'linear-gradient(to top, rgba(2, 6, 23, 0.8) 0%, rgba(2, 6, 23, 0.6) 40%, rgba(2, 6, 23, 0.2) 75%, rgba(2, 6, 23, 0) 100%)' }}
         ></div>
       </div>
 
