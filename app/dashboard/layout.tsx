@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
 
 
-        <div className={`p-6 flex items-center gap-3 border-b border-white/5 transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCollapsed ? "justify-center px-4 gap-0" : ""}`}>
+        <div className={`p-6 flex items-center gap-2 border-b border-white/5 transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCollapsed ? "justify-center px-4 gap-0" : ""}`}>
           <RSLogo size={isCollapsed ? "small" : "large"} />
           <div className={`flex flex-col whitespace-nowrap overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${isCollapsed ? "w-0 opacity-0 pointer-events-none" : "w-auto opacity-100"}`}>
             <span className="font-poppins font-bold text-[13px] text-blue-50 tracking-wide drop-shadow-md">
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden pb-24 md:pb-0 relative">
         {/* Mobile Header (Slightly more premium glass effect - Glassmorphism 2.0) */}
         <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between p-4 bg-slate-950/60 backdrop-blur-2xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <RSLogo size="large" />
             <div className="flex flex-col">
               <span className="font-roboto-condensed font-bold text-base text-white tracking-wide drop-shadow-md">

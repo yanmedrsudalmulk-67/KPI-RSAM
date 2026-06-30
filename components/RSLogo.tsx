@@ -37,16 +37,33 @@ export default function RSLogo({ size = 'large' }: { size?: 'small' | 'large' })
 
   const logoClasses = "w-[34px] h-[34px] object-contain transition-transform duration-150 ease-out group-hover:scale-105";
 
-  const containerClasses = "w-[42px] h-[43px] bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.15)] group hover:bg-white/10 transition-all duration-150 ease-out flex items-center justify-center flex-shrink-0";
+  const containerClasses = "w-[42px] h-[43px] group transition-all duration-150 ease-out flex items-center justify-center flex-shrink-0";
 
   return (
     <div className={containerClasses}>
       {logoUrl ? (
-        <img src={logoUrl} alt="Logo RS" className={logoClasses} />
+        <img 
+          src={logoUrl} 
+          alt="Logo RS" 
+          className={logoClasses} 
+          style={{
+            filter: "drop-shadow(1px 0px 0px #ffffff) drop-shadow(-1px 0px 0px #ffffff) drop-shadow(0px 1px 0px #ffffff) drop-shadow(0px -1px 0px #ffffff) drop-shadow(0 2px 4px rgba(0,0,0,0.5))"
+          }}
+        />
       ) : size === 'small' ? (
-        <HeartPulse className="w-6 h-6 text-blue-400 group-hover:scale-105 transition-transform" />
+        <HeartPulse 
+          className="w-6 h-6 text-blue-400 group-hover:scale-105 transition-transform" 
+          style={{
+            filter: "drop-shadow(1px 0px 0px #ffffff) drop-shadow(-1px 0px 0px #ffffff) drop-shadow(0px 1px 0px #ffffff) drop-shadow(0px -1px 0px #ffffff)"
+          }}
+        />
       ) : (
-        <HeartPulse className="w-7 h-7 text-blue-400 group-hover:scale-105 transition-transform" />
+        <HeartPulse 
+          className="w-7 h-7 text-blue-400 group-hover:scale-105 transition-transform" 
+          style={{
+            filter: "drop-shadow(1px 0px 0px #ffffff) drop-shadow(-1px 0px 0px #ffffff) drop-shadow(0px 1px 0px #ffffff) drop-shadow(0px -1px 0px #ffffff)"
+          }}
+        />
       )}
     </div>
   );
