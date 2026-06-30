@@ -397,10 +397,10 @@ export default function PengaturanPage() {
           });
           return;
         }
-        if (file.size > 10 * 1024 * 1024) {
+        if (file.size > 200 * 1024 * 1024) {
           setStatusMessage({
             type: "error",
-            text: "Ukuran video maksimal 10 MB",
+            text: "Ukuran video maksimal 200 MB",
           });
           return;
         }
@@ -730,8 +730,8 @@ export default function PengaturanPage() {
             if (targetFile.type !== "video/mp4" && !targetFile.name.endsWith(".mp4")) {
               throw new Error("Format file harus MP4!");
             }
-            if (targetFile.size > 10 * 1024 * 1024) {
-              throw new Error("Ukuran video maksimal 10 MB");
+            if (targetFile.size > 200 * 1024 * 1024) {
+              throw new Error("Ukuran video maksimal 200 MB");
             }
 
             if (!supabase) {
@@ -1328,7 +1328,7 @@ export default function PengaturanPage() {
                           <span className="text-[10px] text-gray-400 text-center mt-1">
                             {welcomeFile ? welcomeFile.name : "Seret & letakkan atau klik untuk memilih file video"}
                           </span>
-                          <span className="text-[9px] text-gray-500 mt-0.5">Format .MP4 (Maksimal 10MB)</span>
+                          <span className="text-[9px] text-gray-500 mt-0.5">Format .MP4 (Maksimal 200MB)</span>
                           <input
                             id="welcome-video-upload-input"
                             type="file"

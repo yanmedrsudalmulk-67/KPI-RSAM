@@ -116,26 +116,26 @@ CREATE POLICY "Allow public write/all settings" ON public.settings FOR ALL USING
 -- untuk role non-superuser. Dengan membungkus perintah ini dalam block DO, jika terjadi error perizinan, 
 -- tabel utama tetap akan berhasil dibuat sempurna dan tidak membatalkan keseluruhan transaksi SQL.
 
--- Buat bucket 'assets'
+-- Buat bucket 'assets' (dengan batas ukuran 200MB / 209715200 bytes)
 DO $$
 BEGIN
-    INSERT INTO storage.buckets (id, name, public) 
-    VALUES ('assets', 'assets', true)
-    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO storage.buckets (id, name, public, file_size_limit) 
+    VALUES ('assets', 'assets', true, 209715200)
+    ON CONFLICT (id) DO UPDATE SET file_size_limit = 209715200;
 EXCEPTION
     WHEN OTHERS THEN
-        RAISE NOTICE 'Notice: Gagal membuat bucket storage "assets". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
+        RAISE NOTICE 'Notice: Gagal membuat/mengupdate bucket storage "assets". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
 END $$;
 
--- Buat bucket 'dokumen_realisasi_kpi'
+-- Buat bucket 'dokumen_realisasi_kpi' (dengan batas ukuran 200MB / 209715200 bytes)
 DO $$
 BEGIN
-    INSERT INTO storage.buckets (id, name, public) 
-    VALUES ('dokumen_realisasi_kpi', 'dokumen_realisasi_kpi', true)
-    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO storage.buckets (id, name, public, file_size_limit) 
+    VALUES ('dokumen_realisasi_kpi', 'dokumen_realisasi_kpi', true, 209715200)
+    ON CONFLICT (id) DO UPDATE SET file_size_limit = 209715200;
 EXCEPTION
     WHEN OTHERS THEN
-        RAISE NOTICE 'Notice: Gagal membuat bucket storage "dokumen_realisasi_kpi". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
+        RAISE NOTICE 'Notice: Gagal membuat/mengupdate bucket storage "dokumen_realisasi_kpi". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
 END $$;
 
 -- Atur Kebijakan Akses Storage Objects (Public Access) untuk bucket assets

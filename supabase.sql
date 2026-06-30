@@ -44,12 +44,12 @@ WITH CHECK (true);
 -- 4. Buat storage bucket 'assets' secara aman (menggunakan Block DO agar tidak crash jika terjadi isu hak akses)
 DO $$
 BEGIN
-    INSERT INTO storage.buckets (id, name, public) 
-    VALUES ('assets', 'assets', true)
-    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO storage.buckets (id, name, public, file_size_limit) 
+    VALUES ('assets', 'assets', true, 209715200)
+    ON CONFLICT (id) DO UPDATE SET file_size_limit = 209715200;
 EXCEPTION
     WHEN OTHERS THEN
-        RAISE NOTICE 'Notice: Gagal membuat bucket storage "assets". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
+        RAISE NOTICE 'Notice: Gagal membuat/mengupdate bucket storage "assets". Silakan buat secara manual di menu Storage Supabase jika diperlukan. Error: %', SQLERRM;
 END $$;
 
 -- 5. Berikan akses publik penuh pada bucket 'assets' secara aman
